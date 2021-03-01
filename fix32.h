@@ -166,7 +166,7 @@ struct fix32
     inline fix32& operator ^=(fix32 x) { return *this = *this ^ x; }
     inline fix32& operator *=(fix32 x) { return *this = *this * x; }
     inline fix32& operator /=(fix32 x) { return *this = *this / x; }
-    inline fix32& operator %=(fix32 x) { return *this = *this / x; }
+    inline fix32& operator %=(fix32 x) { return *this = *this % x; }
 
     // Free functions
     static inline fix32 abs(fix32 a) { return a.m_bits > 0 ? a : -a; }
