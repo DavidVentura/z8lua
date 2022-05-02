@@ -41,7 +41,7 @@ typedef unsigned char lu_byte;
 ** this is for hashing only; there is no problem if the integer
 ** cannot hold the whole pointer value
 */
-#define IntPoint(p)  ((unsigned int)(lu_mem)(p))
+#define IntPoint(p)  ((size_t)(lu_mem)(p))
 
 
 
@@ -271,7 +271,7 @@ union luai_Cast { double l_d; LUA_INT32 l_p[2]; };
 /* on several machines, coercion from unsigned to double is slow,
    so it may be worth to avoid */
 #define lua_unsigned2number(u)  \
-    (((u) <= (lua_Unsigned)INT_MAX) ? (lua_Number)(int)(u) : (lua_Number)(u))
+    (((u) <= (lua_Unsigned)INT_MAX) ? (lua_Number)(int32_t)(u) : (lua_Number)((int32_t)u))
 #endif
 
 

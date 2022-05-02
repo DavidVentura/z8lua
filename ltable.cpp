@@ -127,7 +127,7 @@ static Node *mainposition (const Table *t, const TValue *key) {
 static int arrayindex (const TValue *key) {
   if (ttisnumber(key)) {
     lua_Number n = nvalue(key);
-    int k;
+    int32_t k;
     lua_number2int(k, n);
     if (luai_numeq(cast_num(k), n))
       return k;
@@ -167,7 +167,7 @@ static int findindex (lua_State *L, Table *t, StkId key) {
 
 
 int luaH_next (lua_State *L, Table *t, StkId key) {
-  int i = findindex(L, t, key);  /* find original element */
+  int32_t i = findindex(L, t, key);  /* find original element */
   for (i++; i < t->sizearray; i++) {  /* try first array part */
     if (!ttisnil(&t->array[i])) {  /* a non-nil value? */
       setnvalue(key, cast_num(i+1));
@@ -443,7 +443,7 @@ TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key) {
 /*
 ** search function for integers
 */
-const TValue *luaH_getint (Table *t, int key) {
+const TValue *luaH_getint (Table *t, int32_t key) {
   /* (1 <= key && key <= t->sizearray) */
   if (cast(unsigned int, key-1) < cast(unsigned int, t->sizearray))
     return &t->array[key-1];
@@ -483,7 +483,7 @@ const TValue *luaH_get (Table *t, const TValue *key) {
     case LUA_TSHRSTR: return luaH_getstr(t, rawtsvalue(key));
     case LUA_TNIL: return luaO_nilobject;
     case LUA_TNUMBER: {
-      int k;
+      int32_t k;
       lua_Number n = nvalue(key);
       lua_number2int(k, n);
       if (luai_numeq(cast_num(k), n)) /* index is int? */
@@ -515,7 +515,7 @@ TValue *luaH_set (lua_State *L, Table *t, const TValue *key) {
 }
 
 
-void luaH_setint (lua_State *L, Table *t, int key, TValue *value) {
+void luaH_setint (lua_State *L, Table *t, int32_t key, TValue *value) {
   const TValue *p = luaH_getint(t, key);
   TValue *cell;
   if (p != luaO_nilobject)
@@ -529,8 +529,8 @@ void luaH_setint (lua_State *L, Table *t, int key, TValue *value) {
 }
 
 
-static int unbound_search (Table *t, unsigned int j) {
-  unsigned int i = j;  /* i is zero or a present index */
+static int unbound_search (Table *t, int32_t j) {
+  int32_t i = j;  /* i is zero or a present index */
   j++;
   /* find `i' and `j' such that i is present and j is not */
   while (!ttisnil(luaH_getint(t, j))) {
@@ -545,7 +545,7 @@ static int unbound_search (Table *t, unsigned int j) {
   }
   /* now do a binary search between them */
   while (j - i > 1) {
-    unsigned int m = (i+j)/2;
+    int32_t m = (i+j)/2;
     if (ttisnil(luaH_getint(t, m))) j = m;
     else i = m;
   }

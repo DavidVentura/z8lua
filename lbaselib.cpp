@@ -59,16 +59,16 @@ static int luaB_tonumber (lua_State *L) {
     size_t l;
     const char *s = luaL_checklstring(L, 1, &l);
     const char *e = s + l;  /* end point for 's' */
-    int base = luaL_checkint(L, 2);
+    int32_t base = luaL_checkint(L, 2);
     int neg = 0;
     luaL_argcheck(L, 2 <= base && base <= 36, 2, "base out of range");
     s += strspn(s, SPACECHARS);  /* skip initial spaces */
     if (*s == '-') { s++; neg = 1; }  /* handle signal */
     else if (*s == '+') s++;
     if (isalnum((unsigned char)*s)) {
-      lua_Number n = 0;
+      lua_Number n = (int32_t)0;
       do {
-        int digit = (isdigit((unsigned char)*s)) ? *s - '0'
+        int32_t digit = (isdigit((unsigned char)*s)) ? *s - '0'
                        : toupper((unsigned char)*s) - 'A' + 10;
         if (digit >= base) break;  /* invalid numeral; force a fail */
         n = n * (lua_Number)base + (lua_Number)digit;
@@ -169,7 +169,7 @@ static int luaB_collectgarbage (lua_State *L) {
   int res = lua_gc(L, o, ex);
   switch (o) {
     case LUA_GCCOUNT: {
-      int b = lua_gc(L, LUA_GCCOUNTB, 0);
+      uint32_t b = lua_gc(L, LUA_GCCOUNTB, 0);
       lua_pushnumber(L, res + ((lua_Number)b/1024));
       lua_pushinteger(L, b);
       return 2;

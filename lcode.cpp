@@ -292,7 +292,7 @@ static int addk (FuncState *fs, TValue *key, TValue *v) {
   lua_State *L = fs->ls->L;
   TValue *idx = luaH_set(L, fs->h, key);
   Proto *f = fs->f;
-  int k, oldsize;
+  int32_t k, oldsize;
   if (ttisnumber(idx)) {
     lua_Number n = nvalue(idx);
     lua_number2int(k, n);
@@ -762,7 +762,7 @@ static void codecomp (FuncState *fs, OpCode op, int cond, expdesc *e1,
 
 void luaK_prefix (FuncState *fs, UnOpr op, expdesc *e, int line) {
   expdesc e2;
-  e2.t = e2.f = NO_JUMP; e2.k = VKNUM; e2.u.nval = 0;
+  e2.t = e2.f = NO_JUMP; e2.k = VKNUM; e2.u.nval = (int32_t)0;
   switch (op) {
     case OPR_MINUS: {
       if (isnumeral(e))  /* minus constant? */

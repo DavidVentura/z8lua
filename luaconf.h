@@ -338,7 +338,7 @@
 #if LUAI_BITSINT >= 32		/* { */
 #define LUA_INT32	int
 #define LUAI_UMEM	size_t
-#define LUAI_MEM	ptrdiff_t
+#define LUAI_MEM	int32_t
 #else				/* }{ */
 /* 16-bit ints */
 #define LUA_INT32	long
@@ -546,7 +546,7 @@
 */
 
 
-#include <cstdint> // for int16_t
+#include <stdint.h> // for int16_t
 #include "fix32.h" // for z8::fix32
 
 #undef LUA_USE_STRTODHEX
@@ -597,12 +597,12 @@
 
 #define luai_hashnum(i,n) (i = (n * z8::fix32::frombits(2654435769u)).bits())
 
-static inline z8::fix32 operator/(z8::fix32 x, int y) { return x / z8::fix32(y); }
-static inline z8::fix32 operator+(int x, z8::fix32 y) { return z8::fix32(x) + y; }
+static inline z8::fix32 operator/(z8::fix32 x, int y) { return x / z8::fix32(static_cast<uint32_t>(y)); }
+static inline z8::fix32 operator+(int x, z8::fix32 y) { return z8::fix32(static_cast<uint32_t>(x)) + y; }
 
-static inline bool operator==(z8::fix32 x, int y) { return x == z8::fix32(y); }
-static inline bool operator <(z8::fix32 x, int y) { return x  < z8::fix32(y); }
-static inline bool operator <(int x, z8::fix32 y) { return z8::fix32(x)  < y; }
+static inline bool operator==(z8::fix32 x, int y) { return x == z8::fix32(static_cast<uint32_t>(y)); }
+static inline bool operator <(z8::fix32 x, int y) { return x  < z8::fix32(static_cast<uint32_t>(y)); }
+static inline bool operator <(int x, z8::fix32 y) { return z8::fix32(static_cast<uint32_t>(x))  < y; }
 
 #endif
 

@@ -361,11 +361,11 @@ void luaV_objlen (lua_State *L, StkId ra, const TValue *rb) {
       Table *h = hvalue(rb);
       tm = fasttm(L, h->metatable, TM_LEN);
       if (tm) break;  /* metamethod? break switch to call it */
-      setnvalue(ra, cast_num(luaH_getn(h)));  /* else primitive len */
+      setnvalue(ra, cast_num((uint32_t)luaH_getn(h)));  /* else primitive len */
       return;
     }
     case LUA_TSTRING: {
-      setnvalue(ra, cast_num(tsvalue(rb)->len));
+      setnvalue(ra, cast_num((uint32_t)tsvalue(rb)->len));
       return;
     }
     default: {  /* try metamethod */

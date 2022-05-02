@@ -288,4 +288,3 @@ LUAMOD_API int luaopen_pico8 (lua_State *L) {
   luaL_setfuncs(L, pico8lib, 0);
   return 1;
 }
-
