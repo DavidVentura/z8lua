@@ -120,7 +120,7 @@ static int os_getenv (lua_State *L) {
 
 
 static int os_clock (lua_State *L) {
-  lua_pushnumber(L, ((lua_Number)clock())/(lua_Number)CLOCKS_PER_SEC);
+  lua_pushnumber(L, ((lua_Number)clock())/(lua_Number)(uint32_t)CLOCKS_PER_SEC);
   return 1;
 }
 
@@ -265,7 +265,7 @@ static int os_time (lua_State *L) {
 
 static int os_difftime (lua_State *L) {
   lua_pushnumber(L, difftime((time_t)(luaL_checknumber(L, 1)),
-                             (time_t)(luaL_optnumber(L, 2, 0))));
+                             (time_t)(luaL_optnumber(L, 2, (uint8_t)0))));
   return 1;
 }
 

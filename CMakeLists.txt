@@ -1,34 +1,66 @@
 add_library(app_lib INTERFACE)
 target_sources(app_lib INTERFACE
 lapi.cpp
+lauxlib.cpp
+lbaselib.cpp
+lbitlib.cpp
 lcode.cpp
+lcorolib.cpp
+lctype.cpp
+ldblib.cpp
 ldebug.cpp
 ldo.cpp
 ldump.cpp
 lfunc.cpp
 lgc.cpp
+linit.cpp
+liolib.cpp
 llex.cpp
+# lmathlib.cpp
 lmem.cpp
+loadlib.cpp
 lobject.cpp
 lopcodes.cpp
+loslib.cpp
 lparser.cpp
+lpico8lib.cpp
 lstate.cpp
 lstring.cpp
+lstrlib.cpp
 ltable.cpp
+ltablib.cpp
+ltests.cpp
 ltm.cpp
-
+# lua.cpp
 lundump.cpp
 lvm.cpp
 lzio.cpp
-lctype.cpp
-lauxlib.cpp
-lbaselib.cpp
-lcorolib.cpp
-ldblib.cpp
-ltablib.cpp
-lstrlib.cpp
-lpico8lib.cpp
-linit.cpp
 
+fix32.h
+lapi.h
+lauxlib.h
+lcode.h
+lctype.h
+ldebug.h
+ldo.h
+lfunc.h
+lgc.h
+llex.h
+llimits.h
+lmem.h
+lobject.h
+lopcodes.h
+lparser.h
+lstate.h
+lstring.h
+ltable.h
+ltests.h
+ltm.h
+luaconf.h
+lua.h
+lualib.h
+lundump.h
+lvm.h
+lzio.h
 )
 target_link_libraries(app_lib INTERFACE pico_stdlib)
