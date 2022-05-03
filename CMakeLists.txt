@@ -16,7 +16,6 @@ lgc.cpp
 linit.cpp
 liolib.cpp
 llex.cpp
-# lmathlib.cpp
 lmem.cpp
 loadlib.cpp
 lobject.cpp
@@ -31,7 +30,6 @@ ltable.cpp
 ltablib.cpp
 ltests.cpp
 ltm.cpp
-# lua.cpp
 lundump.cpp
 lvm.cpp
 lzio.cpp
