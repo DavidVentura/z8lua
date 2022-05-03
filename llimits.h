@@ -15,7 +15,7 @@
 #include "lua.h"
 
 
-typedef unsigned LUA_INT32 lu_int32;
+typedef LUA_UNSIGNED lu_int32;
 
 typedef LUAI_UMEM lu_mem;
 

@@ -336,7 +336,7 @@
 ** this.
 */
 #if LUAI_BITSINT >= 32		/* { */
-#define LUA_INT32	int
+#define LUA_INT32	int32_t
 #define LUAI_UMEM	size_t
 #define LUAI_MEM	int32_t
 #else				/* }{ */
@@ -463,7 +463,7 @@
 @@ LUA_UNSIGNED is the integral type used by lua_pushunsigned/lua_tounsigned.
 ** It must have at least 32 bits.
 */
-#define LUA_UNSIGNED	unsigned LUA_INT32
+#define LUA_UNSIGNED	uint32_t
 
 
 
