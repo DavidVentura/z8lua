@@ -63,4 +63,4 @@ lundump.h
 lvm.h
 lzio.h
 )
-target_link_libraries(app_lib INTERFACE pico_stdlib)
+#target_link_libraries(app_lib INTERFACE pico_stdlib)
