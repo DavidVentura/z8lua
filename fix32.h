@@ -115,6 +115,11 @@ struct fix32
     inline fix32 operator |(fix32 x) const { return frombits(m_bits | x.m_bits); }
     inline fix32 operator ^(fix32 x) const { return frombits(m_bits ^ x.m_bits); }
 
+    fix32 operator *(int32_t x) const
+    {
+        return frombits(int64_t(m_bits) * x);
+    }
+
     fix32 operator *(fix32 x) const
     {
         return frombits(int64_t(m_bits) * x.m_bits >> 16);
@@ -174,9 +179,22 @@ struct fix32
     static inline fix32 max(fix32 a, fix32 b) { return a > b ? a : b; }
 
     static inline fix32 ceil(fix32 x) { return -floor(-x); }
+    static inline fix32 decimals(fix32 x) { return frombits(x.m_bits & 0x0000ffff); }
     static inline fix32 floor(fix32 x) { return frombits(x.m_bits & 0xffff0000); }
 
     static fix32 pow(fix32 x, fix32 y) { return fix32(std::pow(double(x), double(y))); }
+
+    static inline fix32 fast_shl(fix32 x, uint8_t y)
+    {
+        // If y is negative, use << instead.
+        return frombits(uint32_t(x.bits()) << y);
+    }
+
+    static inline fix32 fast_shr(fix32 x, uint8_t y)
+    {
+        // If y is negative, use << instead.
+        return frombits(uint32_t(x.bits()) >> y);
+    }
 
     static inline fix32 lshr(fix32 x, int y)
     {
