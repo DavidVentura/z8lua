@@ -57,12 +57,12 @@ static int pico8_flr(lua_State *l) {
 }
 
 static int pico8_cos(lua_State *l) {
-    lua_pushnumber(l, cast_num(std::cos(-TAU * (double)lua_tonumber(l, 1))));
+    lua_pushnumber(l, cast_num(std::cos(-TAU * (float)lua_tonumber(l, 1))));
     return 1;
 }
 
 static int pico8_sin(lua_State *l) {
-    lua_pushnumber(l, cast_num(std::sin(-TAU * (double)lua_tonumber(l, 1))));
+    lua_pushnumber(l, cast_num(std::sin(-TAU * (float)lua_tonumber(l, 1))));
     return 1;
 }
 
@@ -71,14 +71,14 @@ static int pico8_atan2(lua_State *l) {
     lua_Number y = lua_tonumber(l, 2);
     // This could simply be atan2(-y,x) but since PICO-8 decided that
     // atan2(0,0) = 0.75 we need to do the same in our version.
-    double a = 0.75 + std::atan2((double)x, (double)y) / TAU;
+    float a = 0.75 + std::atan2((float)x, (float)y) / TAU;
     lua_pushnumber(l, cast_num(a >= 1 ? a - 1 : a));
     return 1;
 }
 
 static int pico8_sqrt(lua_State *l) {
     lua_Number x = lua_tonumber(l, 1);
-    lua_pushnumber(l, cast_num(x.bits() >= 0 ? std::sqrt((double)x) : 0));
+    lua_pushnumber(l, cast_num(x.bits() >= 0 ? std::sqrt((float)x) : 0));
     return 1;
 }
 
