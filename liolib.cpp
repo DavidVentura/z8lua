@@ -15,6 +15,7 @@
 #endif
 
 
+#include <cassert>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -348,15 +349,16 @@ static int io_lines (lua_State *L) {
 
 
 static int read_number (lua_State *L, FILE *f) {
-  lua_Number d;
-  if (fscanf(f, LUA_NUMBER_SCAN, &d) == 1) {
-    lua_pushnumber(L, d);
-    return 1;
-  }
-  else {
-   lua_pushnil(L);  /* "result" to be removed */
-   return 0;  /* read fails */
-  }
+  assert(0);
+  //lua_Number d;
+  //if (fscanf(f, LUA_NUMBER_SCAN, &d) == 1) {
+  //  lua_pushnumber(L, d);
+  //  return 1;
+  //}
+  //else {
+  // lua_pushnil(L);  /* "result" to be removed */
+  // return 0;  /* read fails */
+  //}
 }
 
 
@@ -512,22 +514,23 @@ static int io_readline (lua_State *L) {
 
 
 static int g_write (lua_State *L, FILE *f, int arg) {
-  int nargs = lua_gettop(L) - arg;
-  int status = 1;
-  for (; nargs--; arg++) {
-    if (lua_type(L, arg) == LUA_TNUMBER) {
-      /* optimization: could be done exactly as for strings */
-      status = status &&
-          fprintf(f, LUA_NUMBER_FMT, lua_tonumber(L, arg)) > 0;
-    }
-    else {
-      size_t l;
-      const char *s = luaL_checklstring(L, arg, &l);
-      status = status && (fwrite(s, sizeof(char), l, f) == l);
-    }
-  }
-  if (status) return 1;  /* file handle already on stack top */
-  else return luaL_fileresult(L, status, NULL);
+  assert(0);
+  //int nargs = lua_gettop(L) - arg;
+  //int status = 1;
+  //for (; nargs--; arg++) {
+  //  if (lua_type(L, arg) == LUA_TNUMBER) {
+  //    /* optimization: could be done exactly as for strings */
+  //    status = status &&
+  //        fprintf(f, LUA_NUMBER_FMT, lua_tonumber(L, arg)) > 0;
+  //  }
+  //  else {
+  //    size_t l;
+  //    const char *s = luaL_checklstring(L, arg, &l);
+  //    status = status && (fwrite(s, sizeof(char), l, f) == l);
+  //  }
+  //}
+  //if (status) return 1;  /* file handle already on stack top */
+  //else return luaL_fileresult(L, status, NULL);
 }
 
 
