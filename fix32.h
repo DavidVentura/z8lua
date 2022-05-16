@@ -25,13 +25,13 @@ struct fix32
     inline fix32() = default;
 
     // Convert from/to double
-    inline fix32(double d)
+    inline fix32(float d)
       : m_bits(int32_t(int64_t(d * 65536.0)))
     {}
 
-    inline operator double() const
+    inline operator float() const
     {
-        return double(m_bits) * (1.0 / 65536.0);
+        return float(m_bits) * (1.0 / 65536.0);
     }
 
     // Conversions up to int16_t are safe.
@@ -182,7 +182,7 @@ struct fix32
     static inline fix32 decimals(fix32 x) { return frombits(x.m_bits & 0x0000ffff); }
     static inline fix32 floor(fix32 x) { return frombits(x.m_bits & 0xffff0000); }
 
-    static fix32 pow(fix32 x, fix32 y) { return fix32(std::pow(double(x), double(y))); }
+    static fix32 pow(fix32 x, fix32 y) { return fix32(std::pow(float(x), float(y))); }
 
     static inline fix32 fast_shl(fix32 x, uint8_t y)
     {

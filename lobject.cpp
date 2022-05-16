@@ -126,14 +126,14 @@ static lua_Number readhexa (const char **s, lua_Number r, int *count) {
 ** C99 specification for 'strtod'
 */
 static lua_Number lua_strx2number (const char *s, char **endptr) {
-  lua_Number r = 0.0;
+  lua_Number r = 0.0f;
   int e = 0, i = 0;
   int neg = 0;  /* 1 if number is negative */
   *endptr = cast(char *, s);  /* nothing is valid yet */
   while (lisspace(cast_uchar(*s))) s++;  /* skip initial spaces */
   neg = isneg(&s);  /* check signal */
   if (!(*s == '0' && (*(s + 1) == 'x' || *(s + 1) == 'X')))  /* check '0x' */
-    return 0.0;  /* invalid format (no '0x') */
+    return 0.0f;  /* invalid format (no '0x') */
   s += 2;  /* skip '0x' */
   r = readhexa(&s, r, &i);  /* read integer part */
   if (*s == '.') {
@@ -141,7 +141,7 @@ static lua_Number lua_strx2number (const char *s, char **endptr) {
     r = readhexa(&s, r, &e);  /* read fractional part */
   }
   if (i == 0 && e == 0)
-    return 0.0;  /* invalid format (no digit) */
+    return 0.0f;  /* invalid format (no digit) */
   e *= -4;  /* each fractional digit divides value by 2^-4 */
   *endptr = cast(char *, s);  /* valid up to here */
   if (*s == 'p' || *s == 'P') {  /* exponent part? */
@@ -182,7 +182,7 @@ static lua_Number readany (const char **s, lua_Number r, int *count, int32_t bas
 ** convert an hexadecimal or binary numeric string to a number
 */
 static lua_Number lua_strany2number (const char *s, char **endptr, int base) {
-  lua_Number r = 0.0, f = 0.0;
+  lua_Number r = 0.0f, f = 0.0f;
   int e = 0, i = 0;
   int neg = 0;  /* 1 if number is negative */
   *endptr = cast(char *, s);  /* nothing is valid yet */
@@ -190,7 +190,7 @@ static lua_Number lua_strany2number (const char *s, char **endptr, int base) {
   neg = isneg(&s);  /* check sign */
   if (*s != '0' || (base == 2 && *(s + 1) != 'b' && *(s + 1) != 'B')
                 || (base == 16 && *(s + 1) != 'x' && *(s + 1) != 'X'))
-    return 0.0;  /* invalid format (no '0b' or '0x') */
+    return 0.f;  /* invalid format (no '0b' or '0x') */
   s += 2;  /* skip '0x' or '0b' */
   r = readany(&s, r, &i, base);  /* read integer part */
   if (*s == '.') {
@@ -198,7 +198,7 @@ static lua_Number lua_strany2number (const char *s, char **endptr, int base) {
     f = readany(&s, f, &e, base, base == 2 ? 16 : 4);  /* read fractional part */
   }
   if (i == 0 && e == 0)
-    return 0.0;  /* invalid format (no digit) */
+    return 0.f;  /* invalid format (no digit) */
   *endptr = cast(char *, s);  /* valid up to here */
   r = lua_Number::frombits(r.bits() | (uint32_t)f.bits() >> (base == 2 ? e : e * 4));
   return neg ? -r : r;

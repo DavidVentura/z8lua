@@ -44,7 +44,7 @@
 #define LUA_USE_POSIX
 #define LUA_USE_DLOPEN		/* needs an extra library: -ldl */
 #define LUA_USE_READLINE	/* needs some extra libraries */
-#define LUA_USE_STRTODHEX	/* assume 'strtod' handles hex formats */
+//#define LUA_USE_STRTODHEX	/* assume 'strtod' handles hex formats */
 #define LUA_USE_AFORMAT		/* assume 'printf' handles 'aA' specifiers */
 #define LUA_USE_LONGLONG	/* assume support for long long */
 #endif
@@ -53,7 +53,7 @@
 #define LUA_USE_POSIX
 #define LUA_USE_DLOPEN		/* does not need -ldl */
 #define LUA_USE_READLINE	/* needs an extra library: -lreadline */
-#define LUA_USE_STRTODHEX	/* assume 'strtod' handles hex formats */
+//#define LUA_USE_STRTODHEX	/* assume 'strtod' handles hex formats */
 #define LUA_USE_AFORMAT		/* assume 'printf' handles 'aA' specifiers */
 #define LUA_USE_LONGLONG	/* assume support for long long */
 #endif
@@ -419,7 +419,7 @@
 ** systems, you can leave 'lua_strx2number' undefined and Lua will
 ** provide its own implementation.
 */
-#define lua_str2number(s,p)	strtod((s), (p))
+#define lua_str2number(s,p)	strtof((s), (p))
 
 #if defined(LUA_USE_STRTODHEX)
 #define lua_strx2number(s,p)	strtod((s), (p))
