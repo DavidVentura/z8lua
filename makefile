@@ -49,8 +49,8 @@ LIB_O=	lbaselib.o lcorolib.o ldblib.o ltablib.o lstrlib.o lpico8lib.o linit.o
 LUA_T=	z8lua
 LUA_O=	lua.o
 
-#LUAC_T=	luac
-#LUAC_O=	luac.o print.o
+LUAC_T=	luac
+LUAC_O=	luac.o
 
 ALL_T= $(CORE_T) $(LUA_T) $(LUAC_T)
 ALL_O= $(CORE_O) $(LUA_O) $(LUAC_O) $(AUX_O) $(LIB_O)
@@ -92,6 +92,7 @@ echo:
 
 # DO NOT DELETE
 
+luac.o: luac.c
 lapi.o: lapi.cpp lua.h luaconf.h fix32.h lapi.h llimits.h lstate.h \
  lobject.h ltm.h lzio.h lmem.h ldebug.h ldo.h lfunc.h lgc.h lstring.h \
  ltable.h lundump.h lvm.h
