@@ -225,7 +225,11 @@ LUA_API void  (lua_pushcclosure) (lua_State *L, lua_CFunction fn, int n);
 LUA_API void  (lua_pushboolean) (lua_State *L, int b);
 LUA_API void  (lua_pushlightuserdata) (lua_State *L, void *p);
 LUA_API int   (lua_pushthread) (lua_State *L);
+LUA_API void  (lua_pushcfastcall) (lua_State *L, void* ptr, int tag);
 
+enum {
+    FCF_NOOP = 1,
+};
 
 /*
 ** get functions (Lua -> stack)

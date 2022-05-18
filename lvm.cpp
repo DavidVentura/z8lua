@@ -288,6 +288,7 @@ int luaV_equalobj_ (lua_State *L, const TValue *t1, const TValue *t2) {
     case LUA_TBOOLEAN: return bvalue(t1) == bvalue(t2);  /* true must be 1 !! */
     case LUA_TLIGHTUSERDATA: return pvalue(t1) == pvalue(t2);
     case LUA_TLCF: return fvalue(t1) == fvalue(t2);
+    case LUA_TFCF: return fcfvalue(t1) == fcfvalue(t2);
     case LUA_TSHRSTR: return eqshrstr(rawtsvalue(t1), rawtsvalue(t2));
     case LUA_TLNGSTR: return luaS_eqlngstr(rawtsvalue(t1), rawtsvalue(t2));
     case LUA_TUSERDATA: {

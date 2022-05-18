@@ -50,6 +50,7 @@
 #define LUA_TLCL	(LUA_TFUNCTION | (0 << 4))  /* Lua closure */
 #define LUA_TLCF	(LUA_TFUNCTION | (1 << 4))  /* light C function */
 #define LUA_TCCL	(LUA_TFUNCTION | (2 << 4))  /* C closure */
+#define LUA_TFCF	(LUA_TFUNCTION | (3 << 4))  /* fast C function call */
 
 
 /* Variant tags for strings */
@@ -141,6 +142,7 @@ typedef struct lua_TValue TValue;
 #define ttisfunction(o)		checktype(o, LUA_TFUNCTION)
 #define ttisclosure(o)		((rttype(o) & 0x1F) == LUA_TFUNCTION)
 #define ttisCclosure(o)		checktag((o), ctb(LUA_TCCL))
+#define ttisfcf(o)		    checktag((o), ctb(LUA_TLCF))
 #define ttisLclosure(o)		checktag((o), ctb(LUA_TLCL))
 #define ttislcf(o)		checktag((o), LUA_TLCF)
 #define ttisuserdata(o)		checktag((o), ctb(LUA_TUSERDATA))
@@ -160,6 +162,7 @@ typedef struct lua_TValue TValue;
 #define clvalue(o)	check_exp(ttisclosure(o), &val_(o).gc->cl)
 #define clLvalue(o)	check_exp(ttisLclosure(o), &val_(o).gc->cl.l)
 #define clCvalue(o)	check_exp(ttisCclosure(o), &val_(o).gc->cl.c)
+#define fcfvalue(o)	check_exp(ttisfcf(o), &val_(o).p)
 #define fvalue(o)	check_exp(ttislcf(o), val_(o).f)
 #define hvalue(o)	check_exp(ttistable(o), &val_(o).gc->h)
 #define bvalue(o)	check_exp(ttisboolean(o), val_(o).b)
@@ -188,6 +191,14 @@ typedef struct lua_TValue TValue;
   { TValue *io=(obj); num_(io)=(x); settt_(io, LUA_TNUMBER); }
 
 #define setnilvalue(obj) settt_(obj, LUA_TNIL)
+
+/* The Fast C function call type is encoded as two
+   bytes. The Hi Byte holds a function tag. The Lo Byte
+   holds the Lua typecode */
+#define setfvalue_fastcall(obj, x, tag) \
+  { TValue *io=(obj); val_(io).p=(x); settt_(io, ((tag<<8)|LUA_TFCF)); }
+
+#define getfcf_tag(typecode) (typecode >> 8)
 
 #define setfvalue(obj,x) \
   { TValue *io=(obj); val_(io).f=(x); settt_(io, LUA_TLCF); }

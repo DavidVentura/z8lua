@@ -454,6 +454,7 @@ LUA_API const void *lua_topointer (lua_State *L, int idx) {
     case LUA_TLCL: return clLvalue(o);
     case LUA_TCCL: return clCvalue(o);
     case LUA_TLCF: return cast(void *, cast(size_t, fvalue(o)));
+    case LUA_TFCF: return fcfvalue(o);
     case LUA_TTHREAD: return thvalue(o);
     case LUA_TUSERDATA:
     case LUA_TLIGHTUSERDATA:
@@ -580,6 +581,12 @@ LUA_API void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
   lua_unlock(L);
 }
 
+LUA_API void lua_pushcfastcall(lua_State *L, void *ptr, int tag) {
+  lua_lock(L);
+  setfvalue_fastcall(L->top, ptr, tag);
+  api_incr_top(L);
+  lua_unlock(L);
+}
 
 LUA_API void lua_pushboolean (lua_State *L, int b) {
   lua_lock(L);

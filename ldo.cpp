@@ -335,6 +335,22 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
         callhook(L, ci);
       return 0;
     }
+    case LUA_TFCF: {
+      int nargs = (int)(L->top - func - 1);
+      int tt = rttype(func);
+      int tag = getfcf_tag(tt); /* Extract the function signature */
+      switch (tag) {
+          case FCF_NOOP:
+              {
+                  TValue *arg1 = func + 1;
+                  // this doesn't _call_ noop, although it should
+                  setnvalue(func, nvalue(arg1));
+                  break;
+              }
+      }
+      L->top = func + 1;
+      return 1;
+    }
     default: {  /* not a function */
       func = tryfuncTM(L, func);  /* retry with 'function' tag method */
       return luaD_precall(L, func, nresults);  /* now it must be a function */

@@ -488,6 +488,9 @@ int main (int argc, char **argv) {
     return EXIT_FAILURE;
   }
   lua_setpico8memory(L, ram);
+  lua_pushcfastcall(L, NULL, 1);
+  lua_setglobal(L, "noop");
+
   /* call 'pmain' in protected mode */
   lua_pushcfunction(L, &pmain);
   lua_pushinteger(L, argc);  /* 1st argument */
