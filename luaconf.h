@@ -602,7 +602,6 @@ static inline z8::fix32 operator+(int x, z8::fix32 y) { return z8::fix32(static_
 
 static inline bool operator==(z8::fix32 x, int y) { return x == z8::fix32(static_cast<uint32_t>(y)); }
 static inline bool operator <(z8::fix32 x, int y) { return x  < z8::fix32(static_cast<uint32_t>(y)); }
-static inline bool operator <(int x, z8::fix32 y) { return z8::fix32(static_cast<uint32_t>(x))  < y; }
 
 #endif
 
