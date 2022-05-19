@@ -25,7 +25,7 @@
 #include "llimits.h"
 #include "lobject.h"
 
-#define TAU 6.2831853071795864769252867665590057683936
+#define TAU (z8::fix32(6.2831853071795864769252867665590057683936f))
 
 static int pico8_max(lua_State *l) {
     lua_pushnumber(l, lua_Number::max(lua_tonumber(l, 1), lua_tonumber(l, 2)));
@@ -57,12 +57,12 @@ static int pico8_flr(lua_State *l) {
 }
 
 static int pico8_cos(lua_State *l) {
-    lua_pushnumber(l, cast_num(cosf(-TAU * (float)lua_tonumber(l, 1))));
+    lua_pushnumber(l, cast_num(cosf(-TAU * lua_tonumber(l, 1))));
     return 1;
 }
 
 static int pico8_sin(lua_State *l) {
-    lua_pushnumber(l, cast_num(sinf(-TAU * (float)lua_tonumber(l, 1))));
+    lua_pushnumber(l, cast_num(sinf(-TAU * lua_tonumber(l, 1))));
     return 1;
 }
 
@@ -71,8 +71,8 @@ static int pico8_atan2(lua_State *l) {
     lua_Number y = lua_tonumber(l, 2);
     // This could simply be atan2(-y,x) but since PICO-8 decided that
     // atan2(0,0) = 0.75 we need to do the same in our version.
-    float a = 0.75 + std::atan2((float)x, (float)y) / TAU;
-    lua_pushnumber(l, cast_num(a >= 1 ? a - 1 : a));
+    float a = 0.75 + atan2f(x, y) / TAU;
+    lua_pushnumber(l, a >= 1 ? a - 1 : a);
     return 1;
 }
 
