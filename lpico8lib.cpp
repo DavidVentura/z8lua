@@ -27,6 +27,38 @@
 
 #define TAU (z8::fix32(6.2831853071795864769252867665590057683936f))
 
+static int pico8_foreach(lua_State* L) {
+    // stack: 1 = table
+    // stack: 2 = function
+    //
+    // Push another reference to the table on top of the stack (so we know
+    // where it is, and this function can work for negative, positive and
+    // pseudo indices
+    lua_pushvalue(L, -2);
+    // stack now contains: -1 => table; {-2 function; -3 table}
+    lua_pushnil(L);
+    // stack now contains: -1 => nil; -2 => table
+    while (lua_next(L, -2))
+    {
+        // stack now contains: -1 => value; -2 => key; -3 => table
+        lua_pushvalue(L, 2); // function
+        // stack now contains: -1 function; => -2 => value; -3 => key; -4 => table
+        // and i want key => value => function => table
+        lua_pushnil(L);
+        // stack now contains: -1 => nil; -2 => function; -3 => value; -4 => key; -5 => table
+        lua_copy(L, -3, -1);
+        // stack now contains: -1 => value; -2 => function; -3 => STALE; -4 => key; -5 => table
+        lua_call(L, 1, 0); // 1 arg, 0 results
+        // stack now contains: -1 => STALE; -2 => key; -3 => table
+        lua_pop(L, 1); // pop stale value
+    }
+    // stack now contains: -1 => table (when lua_next returns 0 it pops the key
+    // but does not push anything.)
+    // Pop table
+    lua_pop(L, 1);
+    // Stack is now the same as it was on entry to this function
+    return 0;
+}
 static int pico8_max(lua_State *l) {
     lua_pushnumber(l, lua_Number::max(lua_tonumber(l, 1), lua_tonumber(l, 2)));
     return 1;
@@ -250,7 +282,7 @@ static int pico8_split(lua_State *l) {
     return 1;
 }
 
-static const luaL_Reg pico8lib[] = {
+static const luaL_Reg fast_pico8lib[] = {
   {"max",   pico8_max},
   {"min",   pico8_min},
   {"mid",   pico8_mid},
@@ -271,11 +303,38 @@ static const luaL_Reg pico8lib[] = {
   {"lshr",  pico8_lshr},
   {"rotl",  pico8_rotl},
   {"rotr",  pico8_rotr},
-  {"tostr", pico8_tostr},
-  {"tonum", pico8_tonum},
-  {"chr",   pico8_chr},
-  {"ord",   pico8_ord},
-  {"split", pico8_split},
+  {NULL, NULL}
+};
+
+// regular call (non-fast) functions
+// either they have >2 args or they don't return 1 value
+static const luaL_Reg pico8lib[] = {
+  {"max",       pico8_max},
+  {"min",       pico8_min},
+  {"mid",       pico8_mid},
+  {"ceil",      pico8_ceil},
+  {"flr",       pico8_flr},
+  {"cos",       pico8_cos},
+  {"sin",       pico8_sin},
+  {"atan2",     pico8_atan2},
+  {"sqrt",      pico8_sqrt},
+  {"abs",       pico8_abs},
+  {"sgn",       pico8_sgn},
+  {"band",      pico8_band},
+  {"bor",       pico8_bor},
+  {"bxor",      pico8_bxor},
+  {"bnot",      pico8_bnot},
+  {"shl",       pico8_shl},
+  {"shr",       pico8_shr},
+  {"lshr",      pico8_lshr},
+  {"rotl",      pico8_rotl},
+  {"rotr",      pico8_rotr},
+  {"tostr",     pico8_tostr},
+  {"tonum",     pico8_tonum},
+  {"chr",       pico8_chr},
+  {"ord",       pico8_ord},
+  {"split",     pico8_split},
+  {"foreach",   pico8_foreach},
   {NULL, NULL}
 };
 
