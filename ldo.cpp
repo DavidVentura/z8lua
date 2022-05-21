@@ -5,6 +5,8 @@
 */
 
 
+#include <stdio.h>
+#include "fix32.h"
 #include <setjmp.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,8 +32,6 @@
 #include "lundump.h"
 #include "lvm.h"
 #include "lzio.h"
-
-
 
 
 /*
@@ -339,15 +339,81 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
       int nargs = (int)(L->top - func - 1);
       int tt = rttype(func);
       int tag = getfcf_tag(tt); /* Extract the function signature */
+      TValue *arg1;
+      lua_Number valarg1 = 0;
+
+      TValue *arg2;
+      TValue *arg3;
+      lua_Number valarg2 = 0;
+      lua_Number valarg3 = 0;
+      if (nargs >= 1) {
+          arg1 = func + 1;
+          //valarg1 = nvalue(arg1);
+          // unsafe // not checking tagtype for number
+          valarg1 = arg1->value_.n;
+      }
+      if (nargs >= 2) {
+          arg2 = func + 2;
+          valarg2 = nvalue(arg2);
+      }
+      if (nargs >= 3) {
+          arg3 = func + 3;
+          valarg3 = nvalue(arg3);
+      }
+
+      // printf("tagtype/typecode: %d; tag %d, arg: %d\n", tt, tag, (int16_t)valarg1);
+      lua_Number res;
       switch (tag) {
-          case FCF_NOOP:
+          // 1 args
+          case FCF_CEIL:
+              res = lua_Number::ceil(valarg1);
+              break;
+          case FCF_FLR:
+              res = lua_Number::floor(valarg1);
+              break;
+          case FCF_COS:
+              res = z8::fix32::cos(valarg1);
+              break;
+          case FCF_SIN:
+              res = z8::fix32::sin(valarg1);
+              break;
+          case FCF_SQRT:
+              res = (valarg1.bits() > 0 ? std::sqrt((float)valarg1) : 0);
+              break;
+          case FCF_ABS:
+              res = lua_Number::abs(valarg1);
+              break;
+          case FCF_SGN:
+              res = valarg1.bits() >= 0 ? 1 : -1;
+              break;
+          case FCF_BNOT:
+              res = ~valarg1;
+              break;
+
+          // 2 args
+          case FCF_ATAN2:
+          case FCF_BAND:
+          case FCF_BOR:
+          case FCF_BXOR:
+          case FCF_SHL:
+          case FCF_SHR:
+              res = valarg1 >> int(valarg2);
+              break;
+          case FCF_LSHR:
+          case FCF_ROTL:
+          case FCF_ROTR:
+              break;
+          // 3 args
+          case FCF_MID:
               {
                   TValue *arg1 = func + 1;
                   // this doesn't _call_ noop, although it should
-                  setnvalue(func, nvalue(arg1));
+                  setnvalue(func, z8::fix32::floor(nvalue(arg1)));
                   break;
               }
       }
+
+      setnvalue(func, res);
       L->top = func + 1;
       return 1;
     }

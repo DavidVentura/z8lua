@@ -51,9 +51,16 @@
 #define LUA_ERRERR	6
 
 
+/* type of numbers in Lua */
+typedef LUA_NUMBER lua_Number;
+
+
 typedef struct lua_State lua_State;
 
 typedef int (*lua_CFunction) (lua_State *L);
+typedef int (*lua_FCF1) (lua_Number);
+typedef int (*lua_FCF2) (lua_Number, lua_Number);
+typedef int (*lua_FCF3) (lua_Number, lua_Number, lua_Number);
 
 
 /*
@@ -97,10 +104,6 @@ typedef void * (*lua_Alloc) (void *ud, void *ptr, size_t osize, size_t nsize);
 #define LUA_RIDX_MAINTHREAD	1
 #define LUA_RIDX_GLOBALS	2
 #define LUA_RIDX_LAST		LUA_RIDX_GLOBALS
-
-
-/* type of numbers in Lua */
-typedef LUA_NUMBER lua_Number;
 
 
 /* type for integer functions */
@@ -228,7 +231,26 @@ LUA_API int   (lua_pushthread) (lua_State *L);
 LUA_API void  (lua_pushcfastcall) (lua_State *L, void* ptr, int tag);
 
 enum {
-    FCF_NOOP = 1,
+    FCF_MAX = 0,
+    FCF_MIN,
+    FCF_MID,
+    FCF_CEIL,
+    FCF_FLR,
+    FCF_COS,
+    FCF_SIN,
+    FCF_ATAN2,
+    FCF_SQRT,
+    FCF_ABS,
+    FCF_SGN,
+    FCF_BAND,
+    FCF_BOR,
+    FCF_BXOR,
+    FCF_BNOT,
+    FCF_SHL,
+    FCF_SHR,
+    FCF_LSHR,
+    FCF_ROTL,
+    FCF_ROTR,
 };
 
 /*

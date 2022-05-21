@@ -142,7 +142,7 @@ typedef struct lua_TValue TValue;
 #define ttisfunction(o)		checktype(o, LUA_TFUNCTION)
 #define ttisclosure(o)		((rttype(o) & 0x1F) == LUA_TFUNCTION)
 #define ttisCclosure(o)		checktag((o), ctb(LUA_TCCL))
-#define ttisfcf(o)		    checktag((o), ctb(LUA_TLCF))
+#define ttisfcf(o)		    checktag((o), ctb(LUA_TFCF))
 #define ttisLclosure(o)		checktag((o), ctb(LUA_TLCL))
 #define ttislcf(o)		checktag((o), LUA_TLCF)
 #define ttisuserdata(o)		checktag((o), ctb(LUA_TUSERDATA))

@@ -25,7 +25,13 @@
 #include "llimits.h"
 #include "lobject.h"
 
-#define TAU (z8::fix32(6.2831853071795864769252867665590057683936f))
+typedef struct luaL_RegX {
+  const char *name;
+  void* func;
+  const uint16_t tag;
+} luaL_RegX;
+
+const z8::fix32 TAU = 6.2831853071795864769252867665590057683936f;
 
 static int pico8_foreach(lua_State* L) {
     // stack: 1 = table
@@ -94,7 +100,7 @@ static int pico8_cos(lua_State *l) {
 }
 
 static int pico8_sin(lua_State *l) {
-    lua_pushnumber(l, cast_num(sinf(-TAU * lua_tonumber(l, 1))));
+    lua_pushnumber(l, cast_num(z8::fix32::sin(-TAU * lua_tonumber(l, 1))));
     return 1;
 }
 
@@ -282,53 +288,71 @@ static int pico8_split(lua_State *l) {
     return 1;
 }
 
-static const luaL_Reg fast_pico8lib[] = {
-  {"max",   pico8_max},
-  {"min",   pico8_min},
-  {"mid",   pico8_mid},
-  {"ceil",  pico8_ceil},
-  {"flr",   pico8_flr},
-  {"cos",   pico8_cos},
-  {"sin",   pico8_sin},
-  {"atan2", pico8_atan2},
-  {"sqrt",  pico8_sqrt},
-  {"abs",   pico8_abs},
-  {"sgn",   pico8_sgn},
-  {"band",  pico8_band},
-  {"bor",   pico8_bor},
-  {"bxor",  pico8_bxor},
-  {"bnot",  pico8_bnot},
-  {"shl",   pico8_shl},
-  {"shr",   pico8_shr},
-  {"lshr",  pico8_lshr},
-  {"rotl",  pico8_rotl},
-  {"rotr",  pico8_rotr},
+static int fpcos(lua_State *l) {
+    lua_pushnumber(l, z8::fix32::cos(lua_tonumber(l, 1)));
+    return 1;
+}
+
+static int fpsin(lua_State *l) {
+    lua_pushnumber(l, z8::fix32::sin(lua_tonumber(l, 1)));
+    return 1;
+}
+
+
+
+static const luaL_RegX fast_pico8lib[] = {
+  {"ceil",  NULL,	FCF_CEIL,   },
+  {"flr",   NULL,	FCF_FLR,    },
+  {"cos",   NULL,	FCF_COS,    },
+  {"sin",   NULL,	FCF_SIN,    },
+  {"sqrt",  NULL,	FCF_SQRT,   },
+  {"abs",   NULL,	FCF_ABS,    },
+  {"sgn",   NULL,	FCF_SGN,    },
+  {"bnot",  NULL,	FCF_BNOT,   },
+
+  //{"max",   (void*)pico8_max,	FCF_MAX,    },
+  //{"min",   (void*)pico8_min,	FCF_MIN,    },
+  //{"mid",   (void*)pico8_mid,	FCF_MID,    },
+  //{"atan2", (void*)pico8_atan2, FCF_ATAN2	},
+  //{"band",  (void*)pico8_band,	FCF_BAND,   },
+  //{"bor",   (void*)pico8_bor,	FCF_BOR,    },
+  //{"bxor",  (void*)pico8_bxor,	FCF_BXOR,   },
+  //{"shl",   (void*)pico8_shl,	FCF_SHL,    },
+  {"shr",   (void*)pico8_shr,	FCF_SHR,    },
+  //{"lshr",  (void*)pico8_lshr,	FCF_LSHR,   },
+  //{"rotl",  (void*)pico8_rotl,	FCF_ROTL,   },
+  //{"rotr",  (void*)pico8_rotr,	FCF_ROTR,   },
   {NULL, NULL}
 };
 
 // regular call (non-fast) functions
 // either they have >2 args or they don't return 1 value
 static const luaL_Reg pico8lib[] = {
+  {"approx_cos",       fpcos},
+  {"approx_sin",       fpsin},
+
+  {"slow_ceil",      pico8_ceil},
+  {"slow_flr",       pico8_flr},
+  {"slow_cos",       pico8_cos},
+  {"slow_sin",       pico8_sin},
+  {"slow_sqrt",      pico8_sqrt},
+  {"slow_abs",       pico8_abs},
+  {"slow_sgn",       pico8_sgn},
+  {"slow_bnot",      pico8_bnot},
+//
   {"max",       pico8_max},
   {"min",       pico8_min},
   {"mid",       pico8_mid},
-  {"ceil",      pico8_ceil},
-  {"flr",       pico8_flr},
-  {"cos",       pico8_cos},
-  {"sin",       pico8_sin},
   {"atan2",     pico8_atan2},
-  {"sqrt",      pico8_sqrt},
-  {"abs",       pico8_abs},
-  {"sgn",       pico8_sgn},
   {"band",      pico8_band},
   {"bor",       pico8_bor},
   {"bxor",      pico8_bxor},
-  {"bnot",      pico8_bnot},
   {"shl",       pico8_shl},
-  {"shr",       pico8_shr},
+//  {"shr",       pico8_shr},
   {"lshr",      pico8_lshr},
   {"rotl",      pico8_rotl},
   {"rotr",      pico8_rotr},
+// non-number // complicated (also don't need to be faster)
   {"tostr",     pico8_tostr},
   {"tonum",     pico8_tonum},
   {"chr",       pico8_chr},
@@ -345,5 +369,10 @@ static const luaL_Reg pico8lib[] = {
 LUAMOD_API int luaopen_pico8 (lua_State *L) {
   lua_pushglobaltable(L);
   luaL_setfuncs(L, pico8lib, 0);
+  const luaL_RegX* l = fast_pico8lib;
+  for (; l->name != NULL; l++) {  /* fill the table with given functions */
+      lua_pushcfastcall(L, NULL, l->tag);
+      lua_setglobal(L, l->name);
+  }
   return 1;
 }

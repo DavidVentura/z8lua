@@ -260,7 +260,7 @@ static void PrintConstant(const Proto* f, int i)
         printf(bvalue(o) ? "true" : "false");
         break;
   case LUA_TNUMBER:
-        printf("%d.%d", nvalue(o).bits() >> 16, nvalue(o).bits() & 0xFFFF);
+        printf("[%f]", (float)nvalue(o));
         break;
   case LUA_TSTRING:
         PrintString(rawtsvalue(o));
