@@ -71,6 +71,17 @@ SLOW_BUILTINS = [
         "ord",
         "split",
         "foreach",
+        # stdlib
+        "all",
+        "sub",
+        "add",
+        "del",
+        "count",
+        "assert",
+        "yield",
+        "cocreate",
+        "coresume",
+        "costatus",
 ]
 
 FAST_BUILTINS = [
@@ -522,6 +533,8 @@ class LuaUndump:
     def find_localization_candidates(self):
         # recurse through all rootChunk.protos; find GETTABUP and SETTABUP to
         _known_funcs = []
+        # TODO: this shouldn't be needed; the current problem is that a lookup that doesn't 
+        # immediately call a function will be optimized
         all_known_functions(self.rootChunk, _known_funcs)
         d = {}
         tabup_access_per_chunk(self.rootChunk, d)
@@ -552,10 +565,12 @@ def all_known_functions(chunk, _list):
 
 def tabup_access_per_chunk(chunk, _dict):
     prev_inst = None
-    for inst in chunk.instructions:
+    for idx, inst in enumerate(chunk.instructions):
         if inst.name not in ['GETTABUP', 'SETTABUP']:
-            prev_inst = inst
             continue
+        if idx > 1:
+            prev_inst = chunk.instructions[idx-1]
+
         if prev_inst and prev_inst.name in ['CLOSURE']:
             # can't make function declarations local.. maybe
             continue
