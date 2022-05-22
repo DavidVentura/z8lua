@@ -14,7 +14,78 @@
 
 import struct
 import array
+from typing import Tuple
 from enum import IntEnum, Enum, auto
+
+GLOBALS_TABLE = "_ENV"
+SLOW_BUILTINS = [
+        "spr",
+        "sspr",
+        "cls",
+        "palt",
+        "pal",
+        "print",
+        "rectfill",
+        "rect",
+        "line",
+        "circ",
+        "circfill",
+        "btn",
+        "btnp",
+        "map",
+        "rnd",
+        "pset",
+        "pget",
+        "fget",
+        "mset",
+        "mget",
+        "sget",
+        "t",
+        "time",
+        "sfx",
+        "printh",
+        "cartdata",
+        "dget",
+        "dset",
+        "menuitem",
+        "music",
+        "camera",
+        "stat",
+        "clip",
+        "color",
+        # math builtins to lua
+        "max",
+        "min",
+        "mid",
+        "atan2",
+        "band",
+        "bor",
+        "bxor",
+        "shl",
+        "lshr",
+        "rotl",
+        "rotr",
+        "tostr",
+        "tonum",
+        "chr",
+        "ord",
+        "split",
+        "foreach",
+]
+
+FAST_BUILTINS = [
+        "ceil",
+        "flr",
+        "cos",
+        "sin",
+        "sqrt",
+        "abs",
+        "sgn",
+        "bnot",
+        "shr",
+        ]
+
+BUILTINS = FAST_BUILTINS + SLOW_BUILTINS
 
 class InstructionType(Enum):
     ABC = auto(),
@@ -28,6 +99,22 @@ class ConstType(IntEnum):
     NUMBER  = 3,
     STRING  = 4,
 
+
+def _get_tabup_ref(chunk: 'Chunk', i: 'Instruction') -> Tuple['Upvalue', 'Constant']:
+        # GETTABUP => a = b[c];
+        if i.name == "GETTABUP":
+            _c = chunk.constants[-i.C-1]
+            _u = chunk.upvalues[i.B]
+            return _u, _c
+
+        # SETTABUP => a[b] = c;
+        if i.name == "SETTABUP":
+            _c = chunk.constants[-i.B-1]
+            _u = chunk.upvalues[i.A]
+            return _u, _c
+
+        raise ValueError(f"Called get tabup ref with {i}")
+
 class Instruction:
     def __init__(self, type: InstructionType, name: str) -> None:
         self.type = type
@@ -40,19 +127,17 @@ class Instruction:
 
     def toString(self, chunk: 'Chunk'):
         _s = str(self)
-        # GETTABUP => a = b[c]; 
+        # GETTABUP => a = b[c];
         if self.name == "GETTABUP":
-            _c = chunk.constants[self.C*-1-1]
-            _u = chunk.upvalues[self.B*-1-1]
+            _u, _c = _get_tabup_ref(chunk, self)
             _s += f'; {_u.name} {_c}'
 
         # SETTABUP => a[b] = c;
         if self.name == "SETTABUP":
-            _c = chunk.constants[self.B*-1-1]
-            _u = chunk.upvalues[self.A*-1-1]
+            _u, _c = _get_tabup_ref(chunk, self)
             _s += f'; {_u.name} {_c}'
 
-        # LOADK => a = bx; 
+        # LOADK => a = bx;
         if self.name == "LOADK":
             const = chunk.constants[self.B]
             _s += f'; {const}'
@@ -63,7 +148,7 @@ class Instruction:
         regs = ""
 
         if self.type == InstructionType.ABC:
-            regs = "%d %d %d" % (self.A, self.B, self.C) 
+            regs = "%d %d %d" % (self.A, self.B, self.C)
         elif self.type == InstructionType.ABx or self.type == InstructionType.AsBx:
             regs = "%d %d" % (self.A, self.B)
 
@@ -156,6 +241,12 @@ class Chunk:
         for z in self.protos:
             z.print()
 
+    def __repr__(self):
+        return self.name
+
+    def __str__(self):
+        return self.name
+
 instr_lookup_tbl = [
         Instruction(InstructionType.ABC, "MOVE"),
         Instruction(InstructionType.ABx, "LOADK"),
@@ -217,11 +308,11 @@ instr_lookup_tbl = [
 
 # at [p]osition, with [s]ize of bits
 def _get_bits(num, p, s):
-    # convert number into binary first 
-    binary = bin(num) 
+    # convert number into binary first
+    binary = bin(num)
 
-    # remove first two characters 
-    binary = binary[2:] 
+    # remove first two characters
+    binary = binary[2:]
 
     # fill in missing bits
     for i in range(32 - len(binary)):
@@ -230,10 +321,10 @@ def _get_bits(num, p, s):
     start = len(binary) - (p+s)
     end = len(binary) - p
 
-    # extract k  bit sub-string 
+    # extract k  bit sub-string
     kBitSubStr = binary[start : end]
 
-    # convert extracted sub-string into decimal again 
+    # convert extracted sub-string into decimal again
     return (int(kBitSubStr,2))
 
 class LuaUndump:
@@ -244,7 +335,7 @@ class LuaUndump:
     @staticmethod
     def dis_chunk(chunk: Chunk):
         chunk.print()
-    
+
     def loadBlock(self, sz) -> bytearray:
         if self.index + sz > len(self.bytecode):
             raise Exception("Malformed bytecode!")
@@ -386,7 +477,7 @@ class LuaUndump:
 
 
         return chunk
-        
+
     def decode_rawbytecode(self, rawbytecode):
         # bytecode sanity checks
         if not rawbytecode[0:4] == b'\x1bLua':
@@ -400,7 +491,7 @@ class LuaUndump:
 
         # aligns index, skips header
         self.index = 4
-        
+
         self.vm_version = self.get_byte()
         self.bytecode_format = self.get_byte()
         self.big_endian = (self.get_byte() == 0)
@@ -419,7 +510,7 @@ class LuaUndump:
 
         self.rootChunk = self.decode_chunk()
         return self.rootChunk
-        
+
     def loadFile(self, luaCFile):
         with open(luaCFile, 'rb') as luac_file:
             bytecode = luac_file.read()
@@ -429,8 +520,57 @@ class LuaUndump:
         LuaUndump.dis_chunk(self.rootChunk)
 
     def find_localization_candidates(self):
-        # recurse through all rootChunk.protos; find GETTABUP and SETTABUP to 
-        self.rootChunk
+        # recurse through all rootChunk.protos; find GETTABUP and SETTABUP to
+        _known_funcs = []
+        all_known_functions(self.rootChunk, _known_funcs)
+        d = {}
+        tabup_access_per_chunk(self.rootChunk, d)
+        for k, v in d.items():
+            if len(v) > 1:
+                continue
+            v = v.pop()
+            if k in _known_funcs:
+                continue
+            print(f"In function {v}, '{k}' can be localized")
+
+
+def all_known_functions(chunk, _list):
+    prev_inst = None
+    for inst in chunk.instructions:
+        if inst.name != 'SETTABUP':
+            prev_inst = inst
+            continue
+        if prev_inst and prev_inst.name != "CLOSURE":
+            continue
+        u, c = _get_tabup_ref(chunk, inst)
+        if u.name != GLOBALS_TABLE:
+            continue
+        _list.append(c.data)
+
+    for _chunk in chunk.protos:
+        all_known_functions(_chunk, _list)
+
+def tabup_access_per_chunk(chunk, _dict):
+    prev_inst = None
+    for inst in chunk.instructions:
+        if inst.name not in ['GETTABUP', 'SETTABUP']:
+            prev_inst = inst
+            continue
+        if prev_inst and prev_inst.name in ['CLOSURE']:
+            # can't make function declarations local.. maybe
+            continue
+        u, c = _get_tabup_ref(chunk, inst)
+        if u.name != GLOBALS_TABLE:
+            continue
+        if c.data in BUILTINS:
+            continue
+
+        _dict.setdefault(c.data, set())
+        _dict[c.data].add(chunk)
+
+    for _chunk in chunk.protos:
+        tabup_access_per_chunk(_chunk, _dict)
+
 
 lu = LuaUndump()
 lu.loadFile('luac.out')
