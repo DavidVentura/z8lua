@@ -17,6 +17,9 @@ import array
 from typing import Tuple
 from enum import IntEnum, Enum, auto
 
+LUA_SIGNATURE = bytearray([0x1B, 0x4C, 0x75, 0x61])
+LUA_MAGIC = bytearray([0x19, 0x93, 0x0D, 0x0A, 0x1A, 0x0A])
+
 GLOBALS_TABLE = "_ENV"
 SLOW_BUILTINS = [
         "spr",
@@ -127,10 +130,10 @@ def _get_tabup_ref(chunk: 'Chunk', i: 'Instruction') -> Tuple['Upvalue', 'Consta
         raise ValueError(f"Called get tabup ref with {i}")
 
 class Instruction:
-    def __init__(self, type: InstructionType, name: str) -> None:
+    def __init__(self, type: InstructionType, name: str, opcode: int = 0) -> None:
         self.type = type
         self.name = name
-        self.opcode: int = None
+        self.opcode = opcode
         self.A: int = None
         self.B: int = None
         self.C: int = None
@@ -165,6 +168,41 @@ class Instruction:
 
         return "[%d] %s : %s" % (self.line, instr, regs)
 
+    @staticmethod
+    def from_bytes(data: bytes) -> 'Instruction':
+        opcode = _get_bits(data, 0, 6)
+        template = instr_lookup_tbl[opcode]
+        instruction = Instruction(template.type, template.name, opcode)
+
+        # i read the lopcodes.h file to get these bit position and sizes.
+        instruction.A = _get_bits(data, 6, 8) # starts after POS_OP + SIZE_OP (6), with a size of 8
+
+        if instruction.type == InstructionType.ABC:
+            instruction.B = _get_bits(data, 23, 9) # starts after POS_C + SIZE_C (23), with a size of 9
+            instruction.C = _get_bits(data, 14, 9) # starts after POS_A + SIZE_A (14), with a size of 9
+            if instruction.B > 255:
+                instruction.B = 255 - instruction.B
+            if instruction.C > 255:
+                instruction.C = 255 - instruction.C
+        elif instruction.type == InstructionType.ABx:
+            instruction.B = _get_bits(data, 14, 18) # starts after POS_A + SIZE_A (14), with a size of 18
+        elif instruction.type == InstructionType.AsBx:
+            instruction.B = _get_bits(data, 14, 18) - 131071 # Bx is now signed, so just sub half of the MAX_UINT for 18 bits
+        return instruction
+
+    def dump(self) -> bytes:
+        i = 0
+        i |= self.opcode & 0b111111  # lower 6 bits
+        i |= (self.A & 0xff) << 6 # lower 8 bits, displaced 6 bits
+        if self.type == InstructionType.ABC:
+            i |= (self.C & 0x1ff) << 14  # lower _9_ bits, displaced 14
+            i |= (self.B & 0x1ff) << 23  # lower _9_ bits, displaced 23
+        elif self.type == InstructionType.ABx:
+            i |= (self.B & 0x3ffff) << 14  # lower _18_ bits, displaced 14
+        elif self.type == InstructionType.AsBx:
+            i |= ((self.B & 0x3ffff) << 14) + 131071 # lower _18_ bits, displaced 14; add MAX_UINT (131071) to make signed
+        return _to_u32(i)
+
 class Constant:
     def __init__(self, type: ConstType, data) -> None:
         self.type = type
@@ -185,6 +223,23 @@ class Constant:
     def toString(self):
         return str(self)
 
+    def dump(self) -> bytes:
+        b = _to_u8(self.type)
+
+        if self.type == ConstType.NIL:
+            pass
+        elif self.type == ConstType.BOOL:
+            b.extend(_to_u8(int(self.data)))
+        elif self.type == ConstType.NUMBER:
+            b.extend(_to_u32(self.data))
+        elif self.type == ConstType.STRING:
+            b.extend(_to_str(self.data))
+        else:
+            raise Exception("Unknown Datatype! [%d]" % type)
+
+        return b
+
+
 class Local:
     def __init__(self, name: str, start: int, end: int):
         self.name = name
@@ -193,6 +248,14 @@ class Local:
 
     def __str__(self):
         return f'{self.name}\t{self.start}\t{self.end}'
+
+    def dump(self) -> bytearray:
+        b = bytearray()
+        b.extend(_to_str(self.name))
+        b.extend(_to_u32(self.start))
+        b.extend(_to_u32(self.end))
+        return b
+
 
 class Upvalue:
     def __init__(self, idx: int, stack: int, register: int, name: str = '??'):
@@ -204,13 +267,19 @@ class Upvalue:
     def __str__(self):
         return f'{self.idx} {self.name} {self.stack} {self.register}'
 
+    def dump(self) -> bytearray:
+        b = bytearray()
+        b.extend(_to_u8(self.stack))
+        b.extend(_to_u8(self.register))
+        return b
+
 class Chunk:
     def __init__(self) -> None:
         self.constants: list[Constant] = []
         self.instructions: list[Instruction] = []
         self.protos: list[Chunk] = []
 
-        self.name: str = "Unnamed proto"
+        self.source: str = "??"
         self.frst_line: int = 0
         self.last_line: int = 0
         self.numUpvals: int = 0
@@ -220,6 +289,15 @@ class Chunk:
 
         self.upvalues: list[Upvalue] = []
         self.locals: list[Local] = []
+
+    @property
+    def name(self):
+        if self.frst_line == 0:
+            _name = "main"
+        else:
+            _name = "function"
+        return f"{_name} <{self.source[1:]}:{self.frst_line},{self.last_line}>"
+
 
     def appendInstruction(self, instr: Instruction):
         self.instructions.append(instr)
@@ -231,24 +309,24 @@ class Chunk:
         self.protos.append(proto)
 
     def print(self):
-        print("==== [[" + str(self.name) + "'s dissassembly]] ====")
+        print(f'{self.name} ({len(self.instructions)} instructions)')
         for i in range(len(self.instructions)):
-            print("[%3d] %s" % (i, self.instructions[i].toString(self)))
+            print("\t[%3d] %s" % (i, self.instructions[i].toString(self)))
 
-        print("==== [[" + str(self.name) + "'s constants]] ====")
+        print(f'constants ({len(self.constants)})')
         for z in range(len(self.constants)):
             i = self.constants[z]
-            print(str(z) + ": " + i.toString())
+            print('\t' + str(z+1) + ": " + i.toString())
 
-        print("==== [[" + str(self.name) + "'s locals]] ====")
+        print(f'locals ({len(self.locals)})')
         for i, l in enumerate(self.locals):
             print(f'\t{i}\t{l}')
 
-        print("==== [[" + str(self.name) + "'s upvalues]] ====")
+        print(f'upvalues ({len(self.upvalues)})')
         for u in self.upvalues:
-            print(u)
+            print('\t' + str(u))
 
-        print("==== [[" + str(self.name) + "'s protos]] ====")
+        # print("==== [[" + str(self.name) + "'s protos]] ====")
         for z in self.protos:
             z.print()
 
@@ -257,6 +335,48 @@ class Chunk:
 
     def __str__(self):
         return self.name
+
+    def dump(self) -> bytearray:
+        buf = bytearray()
+
+        buf.extend(_to_u32(self.frst_line))
+        buf.extend(_to_u32(self.last_line))
+        buf.extend(_to_u8(self.numParams))
+        buf.extend(_to_u8(int(self.isVarg)))
+        buf.extend(_to_u8(int(self.numUpvals)))
+
+        buf.extend(_to_u32(len(self.instructions)))
+        for i in self.instructions:
+            buf.extend(i.dump())
+
+        buf.extend(_to_u32(len(self.constants)))
+        for c in self.constants:
+            buf.extend(c.dump())
+
+        buf.extend(_to_u32(len(self.protos)))
+        for p in self.protos:
+            buf.extend(p.dump())
+
+        buf.extend(_to_u32(len(self.upvalues)))
+        for u in self.upvalues:
+            buf.extend(u.dump())
+
+        buf.extend(_to_str(self.source))
+
+        buf.extend(_to_u32(len(self.instructions)))
+        for i in self.instructions:
+            buf.extend(_to_u32(i.line))
+
+        buf.extend(_to_u32(len(self.locals)))
+        for l in self.locals:
+            buf.extend(l.dump())
+
+        buf.extend(_to_u32(len(self.upvalues)))
+        for u in self.upvalues:
+            buf.extend(_to_str(u.name))
+
+        return buf
+
 
 instr_lookup_tbl = [
         Instruction(InstructionType.ABC, "MOVE"),
@@ -315,28 +435,17 @@ instr_lookup_tbl = [
         Instruction(InstructionType.ABx, "CLOSURE"),
         Instruction(InstructionType.ABC, "VARARG"),
         Instruction(InstructionType.Ax, "EXTRAARG"),
-        ]
+]
 
 # at [p]osition, with [s]ize of bits
 def _get_bits(num, p, s):
-    # convert number into binary first
-    binary = bin(num)
+    num = num >> p
+    num = num & ((2**s)-1)
+    return num
 
-    # remove first two characters
-    binary = binary[2:]
+def _set_bits(num, p, s):
 
-    # fill in missing bits
-    for i in range(32 - len(binary)):
-        binary = '0' + binary
-
-    start = len(binary) - (p+s)
-    end = len(binary) - p
-
-    # extract k  bit sub-string
-    kBitSubStr = binary[start : end]
-
-    # convert extracted sub-string into decimal again
-    return (int(kBitSubStr,2))
+    return num
 
 class LuaUndump:
     def __init__(self):
@@ -402,36 +511,11 @@ class LuaUndump:
         chunk.isVarg = (self.get_byte() != 0)
         chunk.numUpvals = self.get_byte()
 
-        if chunk.frst_line == 0:
-            chunk.name = f"main<{chunk.frst_line},{chunk.last_line}>"
-        elif (not chunk.name == ""):
-            chunk.name = f"??<{chunk.frst_line},{chunk.last_line}>"
-
         # parse instructions
         num = self.get_int()
         for i in range(num):
             data   = self.get_int32()
-            opcode = _get_bits(data, 0, 6)
-            template = instr_lookup_tbl[opcode]
-            instruction = Instruction(template.type, template.name)
-
-            # i read the lopcodes.h file to get these bit position and sizes.
-            instruction.opcode = opcode
-            instruction.A = _get_bits(data, 6, 8) # starts after POS_OP + SIZE_OP (6), with a size of 8
-
-            if instruction.type == InstructionType.ABC:
-                instruction.B = _get_bits(data, 23, 9) # starts after POS_C + SIZE_C (23), with a size of 9
-                instruction.C = _get_bits(data, 14, 9) # starts after POS_A + SIZE_A (14), with a size of 9
-                if instruction.B > 255:
-                    instruction.B = 255 - instruction.B
-                if instruction.C > 255:
-                    instruction.C = 255 - instruction.C
-            elif instruction.type == InstructionType.ABx:
-                instruction.B = _get_bits(data, 14, 18) # starts after POS_A + SIZE_A (14), with a size of 18
-            elif instruction.type == InstructionType.AsBx:
-                instruction.B = _get_bits(data, 14, 18) - 131071 # Bx is now signed, so just sub half of the MAX_UINT for 18 bits
-
-            chunk.appendInstruction(instruction)
+            chunk.appendInstruction(Instruction.from_bytes(data))
 
         # get constants
         num = self.get_int()
@@ -457,8 +541,6 @@ class LuaUndump:
         for i in range(num):
             chunk.appendProto(self.decode_chunk())
 
-        # FIXME: order here was debug, locals, upvalues
-
         # upvalues
         num = self.get_int()
 #        print(f'getting {num} upvalues')
@@ -467,8 +549,10 @@ class LuaUndump:
             register = self.get_byte()
             chunk.upvalues.append(Upvalue(i, stack, register))
 
-        # line numbers
         source = self.get_string(None)[:-1]
+        chunk.source = source
+
+        # line numbers
         num = self.get_int()
         for i in range(num):
             line = self.get_int()
@@ -506,6 +590,7 @@ class LuaUndump:
         self.vm_version = self.get_byte()
         self.bytecode_format = self.get_byte()
         self.big_endian = (self.get_byte() == 0)
+        assert not self.big_endian
         self.int_size   = self.get_byte()
         self.size_t     = self.get_byte()
         self.instr_size = self.get_byte() # gets size of instructions
@@ -522,6 +607,21 @@ class LuaUndump:
         self.rootChunk = self.decode_chunk()
         return self.rootChunk
 
+    def dump(self) -> bytes:
+        b = bytearray()
+        b.extend(LUA_SIGNATURE)
+        b.extend(_to_u8(self.vm_version))
+        b.extend(_to_u8(self.bytecode_format))
+        b.extend(_to_u8(int(self.big_endian)))
+        b.extend(_to_u8(self.int_size))
+        b.extend(_to_u8(self.size_t))
+        b.extend(_to_u8(self.instr_size))
+        b.extend(_to_u8(self.l_number_size))
+        b.extend(_to_u8(self.integral_flag))
+        b.extend(LUA_MAGIC)
+        b.extend(self.rootChunk.dump())
+        return b
+
     def loadFile(self, luaCFile):
         with open(luaCFile, 'rb') as luac_file:
             bytecode = luac_file.read()
@@ -531,6 +631,7 @@ class LuaUndump:
         LuaUndump.dis_chunk(self.rootChunk)
 
     def find_localization_candidates(self):
+        print('\n############ Optimizations ############\n')
         # recurse through all rootChunk.protos; find GETTABUP and SETTABUP to
         _known_funcs = []
         # TODO: this shouldn't be needed; the current problem is that a lookup that doesn't 
@@ -587,8 +688,27 @@ def tabup_access_per_chunk(chunk, _dict):
         tabup_access_per_chunk(_chunk, _dict)
 
 
+def _to_str(s: str) -> bytearray:
+    b = bytearray()
+    # FIXME this is 'size_t'
+    b.extend(_to_u32(len(s)+1))  # +1 for null byte
+    b.extend(s.encode())
+    b.extend(_to_u8(0)) # null byte
+    return b
+
+def _to_u32(n: int) -> bytearray:
+    assert n < 0xFFFFFFFF
+    b = bytearray()
+    return b
+
+def _to_u8(n: int) -> bytearray:
+    assert n <= 0xFF
+    return bytearray([n])
+
 lu = LuaUndump()
 lu.loadFile('luac.out')
 lu.print_dissassembly()
 
 lu.find_localization_candidates()
+
+lu.dump()
