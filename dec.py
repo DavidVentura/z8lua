@@ -184,6 +184,7 @@ class Instruction:
                 instruction.B = 255 - instruction.B
             if instruction.C > 255:
                 instruction.C = 255 - instruction.C
+
         elif instruction.type == InstructionType.ABx:
             instruction.B = _get_bits(data, 14, 18) # starts after POS_A + SIZE_A (14), with a size of 18
         elif instruction.type == InstructionType.AsBx:
@@ -195,12 +196,19 @@ class Instruction:
         i |= self.opcode & 0b111111  # lower 6 bits
         i |= (self.A & 0xff) << 6 # lower 8 bits, displaced 6 bits
         if self.type == InstructionType.ABC:
-            i |= (self.C & 0x1ff) << 14  # lower _9_ bits, displaced 14
-            i |= (self.B & 0x1ff) << 23  # lower _9_ bits, displaced 23
+            _c = self.C
+            _b = self.B
+            if _c < 0:
+                _c = 255 - _c
+            if _b < 0:
+                _b = 255 - _b
+
+            i |= (_c & 0x1ff) << 14  # lower _9_ bits, displaced 14
+            i |= (_b & 0x1ff) << 23  # lower _9_ bits, displaced 23
         elif self.type == InstructionType.ABx:
             i |= (self.B & 0x3ffff) << 14  # lower _18_ bits, displaced 14
         elif self.type == InstructionType.AsBx:
-            i |= ((abs(self.B) & 0x3ffff) << 14) + 131071 # lower _18_ bits, displaced 14; add MAX_UINT (131071) to make signed
+            i |= ((abs(self.B + 131071) & 0x3ffff) << 14) # lower _18_ bits, displaced 14; add MAX_UINT (131071) to make signed
         return _to_u32(i)
 
 class Constant:
@@ -223,6 +231,34 @@ class Constant:
     def toString(self):
         return str(self)
 
+    @staticmethod
+    def from_bytes(b: bytes) -> Tuple['Constant', int]:
+        type = b[0]
+        read = 1
+        constant = None
+
+        if type == 0: #nil
+            constant = Constant(ConstType.NIL, None)
+        elif type == 1: # bool
+            constant = Constant(ConstType.BOOL, (b[1] != 0))
+            read += 1
+        elif type == 3: # number
+            data = int.from_bytes(b[1:5], byteorder='little', signed=False)
+            constant = Constant(ConstType.NUMBER, data)
+            read += 4
+        elif type == 4: # string
+            # FIXME size_t
+            _strlen = int.from_bytes(b[1:9], byteorder='little', signed=False)
+            _str = b[9:9+_strlen-1].decode()
+            constant = Constant(ConstType.STRING, _str)
+            # 8 = size_t
+            # 1 = null byte
+            read += len(constant.data) + 1 + 8
+        else:
+            raise Exception("Unknown Datatype! [%d]" % type)
+
+        return (constant, read)
+
     def dump(self) -> bytes:
         b = _to_u8(self.type)
 
@@ -236,7 +272,6 @@ class Constant:
             b.extend(_to_str(self.data))
         else:
             raise Exception("Unknown Datatype! [%d]" % type)
-
         return b
 
 
@@ -456,6 +491,9 @@ class LuaUndump:
     def dis_chunk(chunk: Chunk):
         chunk.print()
 
+    def _current_buf(self) -> bytearray:
+        return bytearray(self.bytecode[self.index:])
+
     def loadBlock(self, sz) -> bytearray:
         if self.index + sz > len(self.bytecode):
             raise Exception("Malformed bytecode!")
@@ -496,7 +534,6 @@ class LuaUndump:
         if (size == None):
             size = self.get_size_t()
             if (size == 0):
-                print('string is size 0')
                 return ""
 
         return "".join(chr(x) for x in self.loadBlock(size))
@@ -515,25 +552,27 @@ class LuaUndump:
         num = self.get_int()
         for i in range(num):
             data   = self.get_int32()
-            chunk.appendInstruction(Instruction.from_bytes(data))
+            inst = Instruction.from_bytes(data)
+            _b = inst.dump()
+            my_inst = Instruction.from_bytes(int.from_bytes(_b, byteorder='little', signed=False))
+            assert inst.type == my_inst.type
+            assert inst.name == my_inst.name
+            assert inst.opcode == my_inst.opcode
+            assert inst.A == my_inst.A
+            assert inst.B == my_inst.B
+            assert inst.C == my_inst.C, f"{inst.C=} != {my_inst.C=}"
+            assert inst.line == my_inst.line
+            chunk.appendInstruction(inst)
 
         # get constants
         num = self.get_int()
         for i in range(num):
-            constant: Constant = None
-            type = self.get_byte()
+            constant, bytes_read = Constant.from_bytes(self._current_buf())
+            self.index += bytes_read
 
-            if type == 0: #nil
-                constant = Constant(ConstType.NIL, None)
-            elif type == 1: # bool
-                constant = Constant(ConstType.BOOL, (self.get_byte() != 0))
-            elif type == 3: # number
-                constant = Constant(ConstType.NUMBER, self.get_int32())
-            elif type == 4: # string
-                constant = Constant(ConstType.STRING, self.get_string(None)[:-1])
-            else:
-                raise Exception("Unknown Datatype! [%d]" % type)
-
+            _b = constant.dump()
+            my_const, _ = Constant.from_bytes(_b)
+            assert constant.data == my_const.data, f'{constant.data=} {my_const.data=}'
             chunk.appendConstant(constant)
 
         # parse protos / "primitives"
@@ -691,15 +730,18 @@ def tabup_access_per_chunk(chunk, _dict):
 def _to_str(s: str) -> bytearray:
     b = bytearray()
     # FIXME this is 'size_t'
-    b.extend(_to_u32(len(s)+1))  # +1 for null byte
+    b.extend(_to_u64(len(s)+1))  # +1 for null byte
     b.extend(s.encode())
     b.extend(_to_u8(0)) # null byte
     return b
 
+def _to_u64(n: int) -> bytearray:
+    assert n < 0xFFFFFFFFFFFFFFFF, f'{n} is too big by {n-0xFFFFFFFFFFFFFFFF}!'
+    return bytearray(struct.pack('<Q', n))
+
 def _to_u32(n: int) -> bytearray:
     assert n < 0xFFFFFFFF, f'{n} is too big by {n-0xFFFFFFFF}!'
-    b = bytearray(struct.pack('<I', n))
-    return b
+    return bytearray(struct.pack('<I', n))
 
 def _to_u8(n: int) -> bytearray:
     assert n <= 0xFF
