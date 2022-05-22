@@ -200,7 +200,7 @@ class Instruction:
         elif self.type == InstructionType.ABx:
             i |= (self.B & 0x3ffff) << 14  # lower _18_ bits, displaced 14
         elif self.type == InstructionType.AsBx:
-            i |= ((self.B & 0x3ffff) << 14) + 131071 # lower _18_ bits, displaced 14; add MAX_UINT (131071) to make signed
+            i |= ((abs(self.B) & 0x3ffff) << 14) + 131071 # lower _18_ bits, displaced 14; add MAX_UINT (131071) to make signed
         return _to_u32(i)
 
 class Constant:
@@ -612,7 +612,7 @@ class LuaUndump:
         b.extend(LUA_SIGNATURE)
         b.extend(_to_u8(self.vm_version))
         b.extend(_to_u8(self.bytecode_format))
-        b.extend(_to_u8(int(self.big_endian)))
+        b.extend(_to_u8(int(not self.big_endian)))
         b.extend(_to_u8(self.int_size))
         b.extend(_to_u8(self.size_t))
         b.extend(_to_u8(self.instr_size))
@@ -697,8 +697,8 @@ def _to_str(s: str) -> bytearray:
     return b
 
 def _to_u32(n: int) -> bytearray:
-    assert n < 0xFFFFFFFF
-    b = bytearray()
+    assert n < 0xFFFFFFFF, f'{n} is too big by {n-0xFFFFFFFF}!'
+    b = bytearray(struct.pack('<I', n))
     return b
 
 def _to_u8(n: int) -> bytearray:
@@ -711,4 +711,5 @@ lu.print_dissassembly()
 
 lu.find_localization_candidates()
 
-lu.dump()
+with open('myoutput', 'wb') as fd:
+    fd.write(lu.dump())
