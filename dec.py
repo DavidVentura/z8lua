@@ -16,6 +16,7 @@ import struct
 import array
 from typing import Tuple
 from enum import IntEnum, Enum, auto
+from dataclasses import dataclass
 
 LUA_SIGNATURE = bytearray([0x1B, 0x4C, 0x75, 0x61])
 LUA_MAGIC = bytearray([0x19, 0x93, 0x0D, 0x0A, 0x1A, 0x0A])
@@ -101,6 +102,12 @@ FAST_BUILTINS = [
 
 BUILTINS = FAST_BUILTINS + SLOW_BUILTINS
 
+@dataclass(frozen=True)
+class OptimizableInstruction:
+    const: 'Constant'
+    chunk: 'Chunk'
+    inst: 'Instruction'
+
 class InstructionType(Enum):
     ABC = auto(),
     ABx = auto(),
@@ -155,6 +162,26 @@ class Instruction:
         if self.name == "LOADK":
             const = chunk.constants[self.B]
             _s += f'; {const}'
+
+        # BINARY OP => R(A) := RK(B) ? RK(C)
+        if self.name in ["MUL"]:
+            op = "*"
+            if self.A >= len(chunk.locals):
+                a = f'(T)R({self.A})'
+            else:
+                a = f'(L)R({self.A})'
+            b = ''
+            c = ''
+            if self.B < 0:
+                b = f'K({abs(self.B)})'
+            else:
+                b = f'R({self.B})'
+
+            if self.C < 0:
+                c = f'K({abs(self.C)})'
+            else:
+                c = f'R({self.C})'
+            _s += f'; {a} := {b} {op} {c}'
         return _s
 
     def __str__(self):
@@ -684,7 +711,7 @@ class LuaUndump:
             v = v.pop()
             if k in _known_funcs:
                 continue
-            print(f"In function {v}, '{k}' can be localized")
+            print(f"In function {v}, '{k.const.data}' can be localized")
 
 
 def all_known_functions(chunk, _list):
@@ -720,8 +747,9 @@ def tabup_access_per_chunk(chunk, _dict):
         if c.data in BUILTINS:
             continue
 
-        _dict.setdefault(c.data, set())
-        _dict[c.data].add(chunk)
+        o = OptimizableInstruction(c, chunk, inst)
+        _dict.setdefault(o, set())
+        _dict[o].add(chunk)
 
     for _chunk in chunk.protos:
         tabup_access_per_chunk(_chunk, _dict)
