@@ -712,6 +712,8 @@ class LuaUndump:
             if k in _known_funcs:
                 continue
             print(f"In function {v}, '{k.const.data}' can be localized")
+            if k.inst.name == 'SETTABUP':
+                print('it was set')
 
 
 def all_known_functions(chunk, _list):
