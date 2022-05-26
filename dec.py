@@ -137,7 +137,7 @@ def _get_tabup_ref(chunk: 'Chunk', i: 'Instruction') -> Tuple['Upvalue', 'Consta
         raise ValueError(f"Called get tabup ref with {i}")
 
 class Instruction:
-    def __init__(self, type: InstructionType, name: str, opcode: int = 0) -> None:
+    def __init__(self, type: InstructionType, name: str, opcode: int = 0, idx: int = 0) -> None:
         self.type = type
         self.name = name
         self.opcode = opcode
@@ -145,6 +145,34 @@ class Instruction:
         self.B: int = None
         self.C: int = None
         self.line: int = -1
+        self.idx: int = idx
+
+    @property
+    def branchy(self):
+        return self.name in ["FORPREP", "FORLOOP", "JMP", "TFORCALL", "TFORLOOP"]
+
+    def adjust_to_ignore(self, idx):
+        assert self.name in ["FORPREP", "FORLOOP", "JMP"], f"Can't adjust {self.name} yet"
+        if self.name == "FORPREP":
+            if idx < self.idx:
+                return
+            if idx > self.idx + self.B:
+                return
+            self.B -= 1
+        elif self.name == "FORLOOP":
+            if idx > self.idx:
+                return
+            if idx < self.idx + self.B:
+                return
+            self.B += 1
+        elif self.name == "JMP":
+            # B is signed delta to apply to PC; PC already points to next instruction
+            # so if B were 0, this would be a no-op
+            _target_within_fwd_jump = self.idx < idx < (self.idx + self.B + 1)
+            _target_within_back_jump = self.idx > idx > (self.idx + self.B + 1)
+            if _target_within_fwd_jump or _target_within_back_jump:
+                self.B -= 1
+
 
     def toString(self, chunk: 'Chunk'):
         _s = str(self)
@@ -163,7 +191,7 @@ class Instruction:
             const = chunk.constants[self.B]
             _s += f'; {const}'
 
-        # BINARY OP => R(A) := RK(B) ? RK(C)
+        # BINARY OP => R(A) := RK(B) op RK(C)
         if self.name in ["MUL"]:
             op = "*"
             if self.A >= len(chunk.locals):
@@ -184,6 +212,9 @@ class Instruction:
             _s += f'; {a} := {b} {op} {c}'
         return _s
 
+    def __repr__(self):
+        return self.name
+
     def __str__(self):
         instr = "%10s" % self.name
         regs = ""
@@ -193,7 +224,55 @@ class Instruction:
         elif self.type == InstructionType.ABx or self.type == InstructionType.AsBx:
             regs = "%d %d" % (self.A, self.B)
 
-        return "[%d] %s : %s" % (self.line, instr, regs)
+        return "[%03d] [%02d] %s : %s" % (self.idx, self.line, instr, regs)
+
+    @property
+    def source_registers(self):
+        if self.name in ["ADD", "SUB", "MUL", "MOD", "POW", "DIV", "IDIV", "BAND", "BOR", "BXOR", "SHL", "SHR", "MOVE", "LOADK", "GETTABUP", "FORPREP", "FORLOOP", "CONCAT"]:
+            return [self.B, self.C]
+        if self.name in ["CALL"]:  #TODO
+            return [self.A]
+        if self.name in ["JMP"]:
+            return [self.A]
+        if self.name in ["TEST"]:
+            return [self.A, self.C]
+        if self.name in ["TESTSET"]:
+            return [self.B, self.C]
+        if self.name in ["EQ", "LT", "LE"]:
+            return [self.A, self.B, self.C]
+
+        print(f"Didn't know the source register of {self.name}")
+
+    @property
+    def target_register(self):
+        if self.name in ["ADD", "SUB", "MUL", "MOD", "POW", "DIV", "IDIV", "BAND", "BOR", "BXOR", "SHL", "SHR", "MOVE", "LOADK", "GETTABUP", "FORPREP", "FORLOOP", "CONCAT", "TESTSET"]:
+            return self.A
+        if self.name in ["SETTABUP", "RETURN", "CALL", "TEST", "JMP", "LT", "EQ", "LE"]:
+            return None
+        print(f"Didn't know the target register of {self.name}")
+
+    @target_register.setter
+    def target_register(self, value):
+        if self.name in ["ADD", "SUB", "MUL", "MOD", "POW", "DIV", "IDIV", "BAND", "BOR", "BXOR", "SHL", "SHR", "MOVE", "LOADK", "GETTABUP", "FORPREP", "FORLOOP", "CONCAT", "TESTSET"]:
+            self.A = value
+            return
+        if self.name in ["SETTABUP", "RETURN", "CALL", "TEST", "JMP", "LT", "EQ", "LE"]:
+            raise ValueError(f"Tried to set target on {self.name}")
+        print(f"Don't know how to re-target register of {self.name}")
+
+    def replace_source_register(self, old_register, new_register):
+        if self.name in ["ADD", "SUB", "MUL", "MOD", "POW", "DIV", "IDIV", "BAND", "BOR", "BXOR", "SHL", "SHR", "MOVE", "LOADK", "GETTABUP", "FORPREP", "FORLOOP", "CONCAT"]:
+            if self.B == old_register:
+                self.B = new_register
+            if self.C == old_register:
+                self.C = new_register
+            return
+        if self.name in ["CALL"]:  #TODO
+            if self.A == old_register:
+                self.A = new_register
+            return
+        print(f"Don't know how to replace source register of {self.name}")
+
 
     @staticmethod
     def from_bytes(data: bytes) -> 'Instruction':
@@ -254,6 +333,9 @@ class Constant:
         if self.type == ConstType.STRING:
             return f'"{printable_data}"'
         return str(printable_data)
+
+    def __repr__(self):
+        return str(self)
 
     def toString(self):
         return str(self)
@@ -373,7 +455,8 @@ class Chunk:
     def print(self):
         print(f'{self.name} ({len(self.instructions)} instructions)')
         for i in range(len(self.instructions)):
-            print("\t[%3d] %s" % (i, self.instructions[i].toString(self)))
+            #print("\t[%3d] %s" % (i, self.instructions[i].toString(self)))
+            print("\t%s" % (self.instructions[i].toString(self)))
 
         print(f'constants ({len(self.constants)})')
         for z in range(len(self.constants)):
@@ -438,6 +521,53 @@ class Chunk:
             buf.extend(_to_str(u.name))
 
         return buf
+
+    def shadow_temp_regs(self) -> None:
+        last_valid_loc_idx = len(self.locals)
+        last_seen_reg = -1
+        for i in self.instructions:
+            if i.target_register:
+                last_seen_reg = max(last_seen_reg, i.target_register)
+
+        print(f'should shadow til {last_valid_loc_idx}')
+        for k in range(last_valid_loc_idx, last_seen_reg+1):
+            self.add_local(f"shadow_reg_{k}")
+
+    def add_local(self, _id: str) -> int:
+        self.locals.append(Local(f'__tmpLocal_{_id}', self.frst_line, self.last_line))
+        return len(self.locals)-1
+
+    def pop_i_by_idx(self, idx: int):
+        inst = self.instructions[idx]
+        for i in self.instructions:
+            if i.branchy:
+                i.adjust_to_ignore(idx)
+            if i.idx > idx:
+                i.idx -= 1
+        self.instructions.remove(inst)
+
+    def pop_i(self, inst: Instruction):
+        idx = self.instructions.index(inst)
+        self.pop_i_by_idx(idx)
+    
+
+    def retarget_reads_until_write(self, idx: int, old_register: int, new_register: int):
+        # FIXME: this needs to take branching into account
+        for i in self.instructions[idx:]:
+            if i.target_register == old_register:
+                # writing to `source_register`; further reads are for other values
+                return
+            if old_register in i.source_registers:
+                i.replace_source_register(old_register, new_register)
+
+    def retarget_write_before(self, idx: int, target_register: int):
+        print(f'retargeting write before {idx} with target {target_register}')
+        for i in self.instructions[idx:0:-1]:
+            print(i)
+            if i.target_register:
+                print('retargetted')
+                i.target_register = target_register
+                return
 
 
 instr_lookup_tbl = [
@@ -580,8 +710,10 @@ class LuaUndump:
         for i in range(num):
             data   = self.get_int32()
             inst = Instruction.from_bytes(data)
+            inst.idx = i
             _b = inst.dump()
             my_inst = Instruction.from_bytes(int.from_bytes(_b, byteorder='little', signed=False))
+            my_inst.idx = i
             assert inst.type == my_inst.type
             assert inst.name == my_inst.name
             assert inst.opcode == my_inst.opcode
@@ -705,15 +837,39 @@ class LuaUndump:
         all_known_functions(self.rootChunk, _known_funcs)
         d = {}
         tabup_access_per_chunk(self.rootChunk, d)
-        for k, v in d.items():
-            if len(v) > 1:
+
+        const_to_locals = {}
+        for const, optimizables in d.items():
+            if len({o.chunk for o in optimizables}) > 1:
                 continue
-            v = v.pop()
-            if k in _known_funcs:
+            if const in _known_funcs:
                 continue
-            print(f"In function {v}, '{k.const.data}' can be localized")
-            if k.inst.name == 'SETTABUP':
-                print('it was set')
+
+            for k in sorted(optimizables, key=lambda o: o.inst.idx):
+                inst_idx = k.chunk.instructions.index(k.inst)
+                k.chunk.shadow_temp_regs()
+                if k.inst.name == 'SETTABUP':
+                    local_idx = k.chunk.add_local(k.const.data)
+                    const_to_locals[k.const.data] = local_idx
+                    k.chunk.pop_i(k.inst)
+                    # this was going to set in a table R(A)
+                    # should replace that (1 write, going back) with the new local idx
+                    # but also, all reads of that register (if any?) until a write or EOF
+                    # TODO
+                    k.chunk.retarget_write_before(inst_idx-1, local_idx)
+                    k.chunk.retarget_reads_until_write(inst_idx, k.inst.target_register, local_idx)
+                    #for _followup_inst in k.chunk.instructions[inst_idx:]:
+                    #    break
+                elif k.inst.name == 'GETTABUP':
+                    #k.chunk.pop_i_by_idx(inst_idx-1) # GETTABUP is preceded by LOADK
+                    _const = const_to_locals[k.const.data]
+                    #k.chunk.pop_i(k.inst)
+                    _tpl = [i for i in instr_lookup_tbl if i.name == 'MOVE'][0]
+                    k.inst.name = _tpl.name
+                    k.inst.opcode = _tpl.opcode
+                    k.inst.type = _tpl.type
+                    k.inst.B = _const
+                    k.inst.C = 0
 
 
 def all_known_functions(chunk, _list):
@@ -745,13 +901,15 @@ def tabup_access_per_chunk(chunk, _dict):
             continue
         u, c = _get_tabup_ref(chunk, inst)
         if u.name != GLOBALS_TABLE:
+            print("Skipping table on ", u.name)
             continue
         if c.data in BUILTINS:
+            print("Skipping var in builtin", c.data)
             continue
 
         o = OptimizableInstruction(c, chunk, inst)
-        _dict.setdefault(o, set())
-        _dict[o].add(chunk)
+        _dict.setdefault(c.data, set())
+        _dict[c.data].add(o)
 
     for _chunk in chunk.protos:
         tabup_access_per_chunk(_chunk, _dict)
@@ -779,9 +937,11 @@ def _to_u8(n: int) -> bytearray:
 
 lu = LuaUndump()
 lu.loadFile('luac.out')
-lu.print_dissassembly()
+# lu.print_dissassembly()
 
 lu.find_localization_candidates()
+# "Optimized"
+lu.print_dissassembly()
 
 with open('myoutput', 'wb') as fd:
     fd.write(lu.dump())
