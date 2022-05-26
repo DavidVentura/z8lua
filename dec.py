@@ -554,6 +554,7 @@ class Chunk:
     def retarget_reads_until_write(self, idx: int, old_register: int, new_register: int):
         # FIXME: this needs to take branching into account
         for i in self.instructions[idx:]:
+            print(f"Looking at {i}, {i.branchy}")
             if i.target_register == old_register:
                 # writing to `source_register`; further reads are for other values
                 return
