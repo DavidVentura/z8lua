@@ -39,6 +39,7 @@ struct fix32
     inline fix32(int8_t x)  : m_bits(int32_t(x << 16)) {}
     inline fix32(uint8_t x) : m_bits(int32_t(x << 16)) {}
     inline fix32(int16_t x) : m_bits(int32_t(x << 16)) {}
+    inline fix32(int16_t x, uint16_t y) : m_bits(int32_t(x << 16) | int32_t(y)) {}
 
     // Anything above int16_t is risky because of precision loss, but Lua
     // does too many implicit conversions from int that we can’t mark this
@@ -91,13 +92,15 @@ struct fix32
     inline int32_t bits() const { return m_bits; }
 
     // Comparisons
-    inline explicit operator bool() const { return bool(m_bits); }
-    inline bool operator ==(fix32 x) const { return m_bits == x.m_bits; }
-    inline bool operator !=(fix32 x) const { return m_bits != x.m_bits; }
-    inline bool operator  <(fix32 x) const { return m_bits  < x.m_bits; }
-    inline bool operator  >(fix32 x) const { return m_bits  > x.m_bits; }
-    inline bool operator <=(fix32 x) const { return m_bits <= x.m_bits; }
-    inline bool operator >=(fix32 x) const { return m_bits >= x.m_bits; }
+    inline explicit operator bool()    const { return bool(m_bits); }
+    inline bool operator ==(fix32 x)   const { return m_bits == x.m_bits; }
+    inline bool operator !=(fix32 x)   const { return m_bits != x.m_bits; }
+    inline bool operator  <(int16_t x) const { return m_bits  < (int32_t(x << 16)); }
+    inline bool operator  <(fix32 x)   const { return m_bits  < x.m_bits; }
+    inline bool operator  >(fix32 x)   const { return m_bits  > x.m_bits; }
+    inline bool operator  >(int16_t x) const { return m_bits  > (int32_t(x << 16)); }
+    inline bool operator <=(fix32 x)   const { return m_bits <= x.m_bits; }
+    inline bool operator >=(fix32 x)   const { return m_bits >= x.m_bits; }
 
     // Increments
     inline fix32& operator ++() { m_bits += 0x10000; return *this; }
@@ -110,11 +113,12 @@ struct fix32
     inline fix32 operator -() const { return frombits(-m_bits); }
     inline fix32 operator ~() const { return frombits(~m_bits); }
 
-    inline fix32 operator +(fix32 x) const { return frombits(m_bits + x.m_bits); }
-    inline fix32 operator -(fix32 x) const { return frombits(m_bits - x.m_bits); }
-    inline fix32 operator &(fix32 x) const { return frombits(m_bits & x.m_bits); }
-    inline fix32 operator |(fix32 x) const { return frombits(m_bits | x.m_bits); }
-    inline fix32 operator ^(fix32 x) const { return frombits(m_bits ^ x.m_bits); }
+    inline fix32 operator +(fix32 x) const   { return frombits(m_bits + x.m_bits); }
+    inline fix32 operator -(fix32 x) const   { return frombits(m_bits - x.m_bits); }
+//    inline fix32 operator -(int16_t x) const { return *this - fix32(x); }
+    inline fix32 operator &(fix32 x) const   { return frombits(m_bits & x.m_bits); }
+    inline fix32 operator |(fix32 x) const   { return frombits(m_bits | x.m_bits); }
+    inline fix32 operator ^(fix32 x) const   { return frombits(m_bits ^ x.m_bits); }
 
     fix32 operator *(int32_t x) const
     {
@@ -185,16 +189,29 @@ struct fix32
 
     static fix32 pow(fix32 x, fix32 y) { return fix32(std::pow(float(x), float(y))); }
 
+    static void to_string(fix32 x, char* buf) {
+        uint32_t dec = (uint16_t)(x.bits()); // keep only last 16 bits
+        for(uint8_t i = 0; i<16; i++) {
+            dec *= 10;
+            buf[i] = '0' + (dec >> 16); // keep the integer part only
+            dec &= 0xffff;
+            if(dec==0) {
+                buf[i+1] = 0;
+                break;
+            }
+        }
+    }
+
     static inline fix32 fast_shl(fix32 x, uint8_t y)
     {
-        // If y is negative, use << instead.
-        return frombits(uint32_t(x.bits()) << y);
+        // assumes: 0 < y < 31
+        return frombits(x.bits() << y);
     }
 
     static inline fix32 fast_shr(fix32 x, uint8_t y)
     {
-        // If y is negative, use << instead.
-        return frombits(uint32_t(x.bits()) >> y);
+        // assumes: 0 < y < 31
+        return frombits(x.bits() >> y);
     }
 
     static inline fix32 lshr(fix32 x, int y)
