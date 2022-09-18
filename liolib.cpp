@@ -350,6 +350,7 @@ static int io_lines (lua_State *L) {
 
 static int read_number (lua_State *L, FILE *f) {
   assert(0);
+  return 0;
   //lua_Number d;
   //if (fscanf(f, LUA_NUMBER_SCAN, &d) == 1) {
   //  lua_pushnumber(L, d);
@@ -515,6 +516,7 @@ static int io_readline (lua_State *L) {
 
 static int g_write (lua_State *L, FILE *f, int arg) {
   assert(0);
+  return 0;
   //int nargs = lua_gettop(L) - arg;
   //int status = 1;
   //for (; nargs--; arg++) {

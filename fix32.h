@@ -44,7 +44,8 @@ struct fix32
     // Anything above int16_t is risky because of precision loss, but Lua
     // does too many implicit conversions from int that we can’t mark this
     // one as explicit.
-    inline fix32(int32_t x)  : m_bits(int32_t(x << 16)) {}
+    //inline fix32(int32_t x)  : m_bits(int32_t(x << 16)) {}
+    inline fix32(int x)  : m_bits(int32_t(x << 16)) {}
 
     inline explicit fix32(uint16_t x) : m_bits(int32_t(x << 16)) {}
     inline explicit fix32(uint32_t x) : m_bits(int32_t(x << 16)) {}
@@ -120,17 +121,17 @@ struct fix32
     inline fix32 operator |(fix32 x) const   { return frombits(m_bits | x.m_bits); }
     inline fix32 operator ^(fix32 x) const   { return frombits(m_bits ^ x.m_bits); }
 
-    fix32 operator *(int32_t x) const
+    inline fix32 operator *(int32_t x) const
     {
         return frombits(int64_t(m_bits) * x);
     }
 
-    fix32 operator *(fix32 x) const
+    inline fix32 operator *(fix32 x) const
     {
         return frombits(int64_t(m_bits) * x.m_bits >> 16);
     }
 
-    fix32 operator /(fix32 x) const
+    inline fix32 operator /(fix32 x) const
     {
         // This special case ensures 0x8000/0x1 = 0x8000, not 0x8000.0001
         if (x.m_bits == 0x10000)
@@ -148,7 +149,7 @@ struct fix32
         return frombits((m_bits ^ x.m_bits) >= 0 ? 0x7fffffffu : 0x80000001u);
     }
 
-    fix32 operator %(fix32 x) const
+    inline fix32 operator %(fix32 x) const
     {
         // PICO-8 always returns positive values
         x = abs(x);

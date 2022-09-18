@@ -1,4 +1,4 @@
-add_library(my_lua_lib
+add_library(my_lua_lib STATIC
         lapi.cpp
         lauxlib.cpp
         lbaselib.cpp

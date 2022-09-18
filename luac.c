@@ -40,7 +40,7 @@ static void fatal(const char* message)
 
 static void cannot(const char* what)
 {
- fprintf(stderr,"%s: cannot %s %s: %s\n",progname,what,output,strerror(errno));
+ fprintf(stderr,"%s: cannot %s %s: %d\n",progname,what,output,errno);
  exit(EXIT_FAILURE);
 }
 
