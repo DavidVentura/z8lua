@@ -208,10 +208,10 @@ static int call_orderTM (lua_State *L, const TValue *p1, const TValue *p2,
 
 #define PEEK(ram, address) (ram && (address < 0x8000) ? ram[address] : 0)
 
-static z8::fix32 lua_peek(struct lua_State *L, z8::fix32 a, int count)
+static fix32 lua_peek(struct lua_State *L, fix32 a, int count)
 {
   unsigned char const *p = G(L)->pico8memory;
-  int address = int(a) & 0x7fff;
+  int address = ((int)a) & 0x7fff;
   uint32_t ret = 0;
   switch (count) {
     case 4:
@@ -224,7 +224,7 @@ static z8::fix32 lua_peek(struct lua_State *L, z8::fix32 a, int count)
       ret |= PEEK(p, address) << 16;
       break;
   }
-  return z8::fix32::frombits(ret);
+  return (fix32)(ret);
 }
 
 

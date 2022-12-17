@@ -547,7 +547,7 @@
 
 
 #include <stdint.h> // for int16_t
-#include "fix32.h" // for z8::fix32
+#include "c_fix32.h" // for z8::fix32
 
 #undef LUA_USE_STRTODHEX
 #undef LUA_USE_LONGLONG
@@ -571,37 +571,44 @@
 
 #define LUA_PROGNAME	"z8lua"
 #define LUA_INTEGER	int16_t
-#define LUA_NUMBER	z8::fix32
-#define LUAI_UACNUMBER	z8::fix32
-#define l_mathop(x)	(z8::fix32::x)
+#define LUA_NUMBER	fix32
+#define LUAI_UACNUMBER	fix32
+#define l_mathop(x)	(fix32_##x)
 
 #define luai_numidiv(L,a,b)	(l_mathop(floor)((a)/(b)))
 #define luai_numband(L,a,b)	((a)&(b))
 #define luai_numbor(L,a,b)	((a)|(b))
 #define luai_numbxor(L,a,b)	((a)^(b))
-#define luai_numshl(L,a,b)	((a)<<int((b)))
-#define luai_numshr(L,a,b)	((a)>>int((b)))
-#define luai_numlshr(L,a,b)	(l_mathop(lshr)((a),int((b))))
-#define luai_numrotl(L,a,b)	(l_mathop(rotl)((a),int((b))))
-#define luai_numrotr(L,a,b)	(l_mathop(rotr)((a),int((b))))
+#define luai_numshl(L,a,b)	(l_mathop(shl)((a),(b)))
+#define luai_numshr(L,a,b)	(l_mathop(shr)((a),(b)))
+#define luai_numlshr(L,a,b)	(l_mathop(lshr)((a),(b)))
+#define luai_numrotl(L,a,b)	(l_mathop(rotl)((a),(b)))
+#define luai_numrotr(L,a,b)	(l_mathop(rotr)((a),(b)))
 #define luai_numbnot(L,a)	(~(a))
 #define luai_numpeek(L,a)	(lua_peek(L,a,1))
 #define luai_numpeek2(L,a)	(lua_peek(L,a,2))
 #define luai_numpeek4(L,a)	(lua_peek(L,a,4))
 
+/*
 #define lua_number2str(s,n) [&]() { \
   int i = sprintf(s, "%1.4f", (double)n); \
   while (i > 0 && s[i - 1] == '0') s[--i] = '\0'; \
   if (i > 0 && s[i - 1] == '.') s[--i] = '\0'; \
   return i; }()
+*/
+//#define lua_number2str(s,n) sprintf(s, LUA_NUMBER_FMT, fix32_to_float(n))
+#define lua_number2str(s,n) sprintf(s, "n: %x f(n): %f", n, (float)(n))
 
-#define luai_hashnum(i,n) (i = (n * z8::fix32::frombits(2654435769u)).bits())
 
+#define luai_hashnum(i,n) (i = (n * ((fix32)(2654435769u))))
+
+/*
 static inline z8::fix32 operator/(z8::fix32 x, int y) { return x / z8::fix32(static_cast<uint32_t>(y)); }
 static inline z8::fix32 operator+(int x, z8::fix32 y) { return z8::fix32(static_cast<uint32_t>(x)) + y; }
 
 static inline bool operator==(z8::fix32 x, int y) { return x == z8::fix32(static_cast<uint32_t>(y)); }
 static inline bool operator <(z8::fix32 x, int y) { return x  < z8::fix32(static_cast<uint32_t>(y)); }
+*/
 
 #endif
 

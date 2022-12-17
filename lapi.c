@@ -7,6 +7,7 @@
 
 #include <stdarg.h>
 #include <string.h>
+#include <stdio.h>
 
 #define lapi_c
 #define LUA_CORE
@@ -344,6 +345,7 @@ LUA_API lua_Number lua_tonumberx (lua_State *L, int idx, int *isnum) {
   const TValue *o = index2addr(L, idx);
   if (tonumber(o, &n)) {
     if (isnum) *isnum = 1;
+    printf("tonumberx nvalue is %x\n", nvalue(o));
     return nvalue(o);
   }
   else {

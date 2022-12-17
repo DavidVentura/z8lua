@@ -949,7 +949,14 @@ LUALIB_API void luaL_checkversion_ (lua_State *L, lua_Number ver) {
     luaL_error(L, "version mismatch: app. needs %f, Lua core provides %f",
                   ver, *v);
   /* check conversions number -> integer types */
-  lua_pushnumber(L, -(lua_Number)(int32_t)0x1234);
+  lua_pushnumber(L, -(lua_Number)(int32_t)0x1234); // original
+  //lua_pushnumber(L, (lua_Number)fix32_from_i32(-0x1234));
+  //lua_pushnumber(L, (lua_Number)(int32_t)0x1234);
+  printf(" 0x1234 %x\n", (lua_Number)(fix32_from_i32(0x1234)));
+  printf("-0x1234 %x\n", (lua_Number)(fix32_from_i32(-0x1234)));
+  printf(" int %x\n", lua_tointeger(L, -1));
+  printf("uint %x\n", lua_tounsigned(L, -1));
+
   if (lua_tointeger(L, -1) != -0x1234 ||
       lua_tounsigned(L, -1) != (lua_Unsigned)-0x1234)
     luaL_error(L, "bad conversion number->int;"

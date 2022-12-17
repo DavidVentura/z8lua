@@ -33,7 +33,7 @@ add_library(my_lua_lib STATIC
         lvm.cpp
         lzio.cpp
 
-        fix32.h
+        c_fix32.h
         lapi.h
         lauxlib.h
         lcode.h

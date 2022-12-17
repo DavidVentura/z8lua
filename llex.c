@@ -7,6 +7,7 @@
 
 #include <locale.h>
 #include <string.h>
+#include <stdbool.h>
 
 #define llex_c
 #define LUA_CORE

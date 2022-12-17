@@ -11,13 +11,11 @@
 //
 
 
-#include <cmath>
-#include <cctype>
-#include <cstring>
-#include <algorithm>
-
 #define lpico8lib_c
 #define LUA_LIB
+
+#include <string.h>
+#include <stdbool.h>
 
 #include "lua.h"
 
@@ -31,7 +29,7 @@ typedef struct luaL_RegX {
   const uint16_t tag;
 } luaL_RegX;
 
-const z8::fix32 TAU = 6.2831853071795864769252867665590057683936f;
+const fix32 TAU = 6.2831853071795864769252867665590057683936f;
 
 static int pico8_foreach(lua_State* L) {
     // stack: 1 = table
@@ -66,12 +64,12 @@ static int pico8_foreach(lua_State* L) {
     return 0;
 }
 static int pico8_max(lua_State *l) {
-    lua_pushnumber(l, lua_Number::max(lua_tonumber(l, 1), lua_tonumber(l, 2)));
+    lua_pushnumber(l, fix32_max(lua_tonumber(l, 1), lua_tonumber(l, 2)));
     return 1;
 }
 
 static int pico8_min(lua_State *l) {
-    lua_pushnumber(l, lua_Number::min(lua_tonumber(l, 1), lua_tonumber(l, 2)));
+    lua_pushnumber(l, fix32_min(lua_tonumber(l, 1), lua_tonumber(l, 2)));
     return 1;
 }
 
@@ -79,18 +77,18 @@ static int pico8_mid(lua_State *l) {
     lua_Number x = lua_tonumber(l, 1);
     lua_Number y = lua_tonumber(l, 2);
     lua_Number z = lua_tonumber(l, 3);
-    lua_pushnumber(l, x > y ? y > z ? y : lua_Number::min(x, z)
-                            : x > z ? x : lua_Number::min(y, z));
+    lua_pushnumber(l, x > y ? y > z ? y : fix32_min(x, z)
+                            : x > z ? x : fix32_min(y, z));
     return 1;
 }
 
 static int pico8_ceil(lua_State *l) {
-    lua_pushnumber(l, lua_Number::ceil(lua_tonumber(l, 1)));
+    lua_pushnumber(l, fix32_ceil(lua_tonumber(l, 1)));
     return 1;
 }
 
 static int pico8_flr(lua_State *l) {
-    lua_pushnumber(l, lua_Number::floor(lua_tonumber(l, 1)));
+    lua_pushnumber(l, fix32_floor(lua_tonumber(l, 1)));
     return 1;
 }
 
@@ -100,7 +98,7 @@ static int pico8_cos(lua_State *l) {
 }
 
 static int pico8_sin(lua_State *l) {
-    lua_pushnumber(l, cast_num(z8::fix32::sin(-TAU * lua_tonumber(l, 1))));
+    lua_pushnumber(l, cast_num(fix32_sin(-TAU * lua_tonumber(l, 1))));
     return 1;
 }
 
@@ -116,17 +114,17 @@ static int pico8_atan2(lua_State *l) {
 
 static int pico8_sqrt(lua_State *l) {
     lua_Number x = lua_tonumber(l, 1);
-    lua_pushnumber(l, cast_num(x.bits() >= 0 ? std::sqrt((float)x) : 0));
+    lua_pushnumber(l, cast_num(x >= 0 ? sqrt((float)x) : 0));
     return 1;
 }
 
 static int pico8_abs(lua_State *l) {
-    lua_pushnumber(l, lua_Number::abs(lua_tonumber(l, 1)));
+    lua_pushnumber(l, fix32_abs(lua_tonumber(l, 1)));
     return 1;
 }
 
 static int pico8_sgn(lua_State *l) {
-    lua_pushnumber(l, cast_num(lua_tonumber(l, 1).bits() >= 0 ? 1.f : -1.f));
+    lua_pushnumber(l, cast_num(lua_tonumber(l, 1) >= 0 ? 1.f : -1.f));
     return 1;
 }
 
@@ -151,34 +149,34 @@ static int pico8_bnot(lua_State *l) {
 }
 
 static int pico8_shl(lua_State *l) {
-    lua_pushnumber(l, lua_tonumber(l, 1) << int(lua_tonumber(l, 2)));
+    lua_pushnumber(l, lua_tonumber(l, 1) << (int)(lua_tonumber(l, 2)));
     return 1;
 }
 
 static int pico8_lshr(lua_State *l) {
-    lua_pushnumber(l, lua_Number::lshr(lua_tonumber(l, 1), int(lua_tonumber(l, 2))));
+    lua_pushnumber(l, fix32_lshr(lua_tonumber(l, 1), (int)(lua_tonumber(l, 2))));
     return 1;
 }
 
 static int pico8_shr(lua_State *l) {
-    lua_pushnumber(l, lua_tonumber(l, 1) >> int(lua_tonumber(l, 2)));
+    lua_pushnumber(l, lua_tonumber(l, 1) >> (int)(lua_tonumber(l, 2)));
     return 1;
 }
 
 static int pico8_rotl(lua_State *l) {
-    lua_pushnumber(l, lua_Number::rotl(lua_tonumber(l, 1), int(lua_tonumber(l, 2))));
+    lua_pushnumber(l, fix32_rotl(lua_tonumber(l, 1), (int)(lua_tonumber(l, 2))));
     return 1;
 }
 
 static int pico8_rotr(lua_State *l) {
-    lua_pushnumber(l, lua_Number::rotr(lua_tonumber(l, 1), int(lua_tonumber(l, 2))));
+    lua_pushnumber(l, fix32_rotr(lua_tonumber(l, 1), (int)(lua_tonumber(l, 2))));
     return 1;
 }
 
 static int pico8_tostr(lua_State *l) {
     char buffer[20];
     char const *s = buffer;
-    auto hex = lua_toboolean(l, 2);
+    bool hex = lua_toboolean(l, 2);
     switch (lua_type(l, 1))
     {
         case LUA_TNONE:
@@ -188,7 +186,7 @@ static int pico8_tostr(lua_State *l) {
         case LUA_TNUMBER: {
             lua_Number x = lua_tonumber(l, 1);
             if (hex) {
-                uint32_t b = (uint32_t)x.bits();
+                uint32_t b = (uint32_t)x;
                 sprintf(buffer, "0x%04x.%04x", (b >> 16) & 0xffff, b & 0xffff);
             } else {
                 lua_number2str(buffer, x);
@@ -243,11 +241,11 @@ static int pico8_ord(lua_State *l) {
     if (!lua_isnone(l, 2)) {
         if (!lua_isnumber(l, 2))
             return 0;
-        n = int(lua_tonumber(l, 2)) - 1;
+        n = (int)(lua_tonumber(l, 2)) - 1;
     }
-    if (n < 0 || size_t(n) >= len)
+    if (n < 0 || (size_t)(n) >= len)
         return 0;
-    lua_pushnumber(l, uint8_t(s[n]));
+    lua_pushnumber(l, (uint8_t)(s[n]));
     return 1;
 }
 
@@ -261,13 +259,13 @@ static int pico8_split(lua_State *l) {
     int size = 0;
     char needle = ',';
     if (lua_isnumber(l, 2)) {
-        size = int(lua_tonumber(l, 2));
+        size = (int)(lua_tonumber(l, 2));
         if (size <= 0)
             size = 1;
     } else if (lua_isstring(l, 2)) {
         needle = *lua_tostring(l, 2);
     }
-    auto convert = lua_isnone(l, 3) || lua_toboolean(l, 3);
+    int convert = lua_isnone(l, 3) || lua_toboolean(l, 3);
     char const *end = haystack + hlen + (!size && needle);
     for (char const *parser = haystack; parser < end; ) {
         lua_Number num;
@@ -282,19 +280,19 @@ static int pico8_split(lua_State *l) {
         else
             lua_pushstring(l, parser);
         *(char *)next = saved;
-        lua_rawseti(l, -2, int(++count));
+        lua_rawseti(l, -2, (int)(++count));
         parser = next + (!size && needle);
     }
     return 1;
 }
 
 static int fpcos(lua_State *l) {
-    lua_pushnumber(l, z8::fix32::cos(lua_tonumber(l, 1)));
+    lua_pushnumber(l, fix32_cos(lua_tonumber(l, 1)));
     return 1;
 }
 
 static int fpsin(lua_State *l) {
-    lua_pushnumber(l, z8::fix32::sin(lua_tonumber(l, 1)));
+    lua_pushnumber(l, fix32_sin(lua_tonumber(l, 1)));
     return 1;
 }
 
