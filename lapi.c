@@ -361,7 +361,9 @@ LUA_API lua_Integer lua_tointegerx (lua_State *L, int idx, int *isnum) {
   if (tonumber(o, &n)) {
     lua_Integer res;
     lua_Number num = nvalue(o);
+    printf("isnumber %x\n", num);
     lua_number2integer(res, num);
+    printf("isnumber int %x\n", res);
     if (isnum) *isnum = 1;
     return res;
   }

@@ -224,7 +224,8 @@ static fix32 lua_peek(struct lua_State *L, fix32 a, int count)
       ret |= PEEK(p, address) << 16;
       break;
   }
-  return (fix32)(ret);
+  // FIXME: cast to fix32?
+  return ret;
 }
 
 

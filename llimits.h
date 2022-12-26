@@ -251,7 +251,9 @@ union luai_Cast { double l_d; LUA_INT32 l_p[2]; };
 #endif
 
 #if !defined(lua_number2integer)
-#define lua_number2integer(i,n)	((i)=(lua_Integer)(n))
+//#define lua_number2integer(i,n)	((i)=(lua_Integer)(n))
+// lua_Number is FIX32 (16 bit int, 16 bit dec), forcing to Integer needs to only keep the integral, top 16, bits
+#define lua_number2integer(i,n)	((i)=(lua_Integer)(fix32_integral(n)))
 #endif
 
 #if !defined(lua_number2unsigned)	/* { */

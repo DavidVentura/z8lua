@@ -358,7 +358,7 @@ typedef struct lua_TValue TValue;
 
 #undef setnvalue
 #define setnvalue(obj,x) \
-   { TValue *io=(obj); num_(io)=(fix32_from_i32((x))); settt_(io, LUA_TNUMBER); }
+   { TValue *io=(obj); num_(io)=(x); settt_(io, LUA_TNUMBER); }
 // { TValue *io_=(obj); num_(io_)=(x); lua_assert(ttisnumber(io_)); }
 
 #undef setobj
