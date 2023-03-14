@@ -439,7 +439,7 @@ static int llex (LexState *ls, SemInfo *seminfo) {
       }
       case '?': {  /* '?' at start of line */
         next(ls);
-        if (atsol == 1) { ls->emiteol = 1; return TK_PRINT; }
+        ls->emiteol = 1; return TK_PRINT;
         return '?';
       }
       case '-': {  /* '-' or '-=' or '--' (comment) */
