@@ -17,7 +17,9 @@ LOCAL = $(CWARNS)
 
 
 CC= g++
-CFLAGS= -Wall $(MYCFLAGS) -O2
+CXX= $(CC)
+CFLAGS= -Wall $(MYCFLAGS) -O2 -std=c++11
+CXXFLAGS= $(CFLAGS)
 AR= ar rcu
 RANLIB= ranlib
 RM= rm -f
@@ -30,8 +32,9 @@ MYLIBS=
 # enable Linux goodies
 MYCFLAGS= $(LOCAL) -DLUA_USE_LINUX
 MYLDFLAGS= -Wl,-E
+MYLDFLAGS= -Wl
 MYLIBS= -ldl -lreadline -lhistory
-
+MYLIBS= -ldl -lreadline
 
 
 # == END OF USER SETTINGS. NO NEED TO CHANGE ANYTHING BELOW THIS LINE =========
