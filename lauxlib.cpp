@@ -204,22 +204,22 @@ LUALIB_API int luaL_error (lua_State *L, const char *fmt, ...) {
 }
 
 
-LUALIB_API int luaL_fileresult (lua_State *L, int stat, const char *fname) {
-  int en = errno;  /* calls to Lua API may change this value */
-  if (stat) {
-    lua_pushboolean(L, 1);
-    return 1;
-  }
-  else {
-    lua_pushnil(L);
-    if (fname)
-      lua_pushfstring(L, "%s: %s", fname, strerror(en));
-    else
-      lua_pushstring(L, strerror(en));
-    lua_pushinteger(L, en);
-    return 3;
-  }
-}
+//LUALIB_API int luaL_fileresult (lua_State *L, int stat, const char *fname) {
+//  int en = errno;  /* calls to Lua API may change this value */
+//  if (stat) {
+//    lua_pushboolean(L, 1);
+//    return 1;
+//  }
+//  else {
+//    lua_pushnil(L);
+//    if (fname)
+//      lua_pushfstring(L, "%s: %s", fname, strerror(en));
+//    else
+//      lua_pushstring(L, strerror(en));
+//    lua_pushinteger(L, en);
+//    return 3;
+//  }
+//}
 
 
 #if !defined(inspectstat)	/* { */
@@ -244,21 +244,21 @@ LUALIB_API int luaL_fileresult (lua_State *L, int stat, const char *fname) {
 #endif				/* } */
 
 
-LUALIB_API int luaL_execresult (lua_State *L, int stat) {
-  const char *what = "exit";  /* type of termination */
-  if (stat == -1)  /* error? */
-    return luaL_fileresult(L, 0, NULL);
-  else {
-    inspectstat(stat, what);  /* interpret result */
-    if (*what == 'e' && stat == 0)  /* successful termination? */
-      lua_pushboolean(L, 1);
-    else
-      lua_pushnil(L);
-    lua_pushstring(L, what);
-    lua_pushinteger(L, stat);
-    return 3;  /* return true/nil,what,code */
-  }
-}
+//LUALIB_API int luaL_execresult (lua_State *L, int stat) {
+//  const char *what = "exit";  /* type of termination */
+//  if (stat == -1)  /* error? */
+//    return luaL_fileresult(L, 0, NULL);
+//  else {
+//    inspectstat(stat, what);  /* interpret result */
+//    if (*what == 'e' && stat == 0)  /* successful termination? */
+//      lua_pushboolean(L, 1);
+//    else
+//      lua_pushnil(L);
+//    lua_pushstring(L, what);
+//    lua_pushinteger(L, stat);
+//    return 3;  /* return true/nil,what,code */
+//  }
+//}
 
 /* }====================================================== */
 
@@ -585,11 +585,14 @@ static const char *getF (lua_State *L, void *ud, size_t *size) {
 
 
 static int errfile (lua_State *L, const char *what, int fnameindex) {
+	return 0;
+	/*
   const char *serr = strerror(errno);
   const char *filename = lua_tostring(L, fnameindex) + 1;
   lua_pushfstring(L, "cannot %s %s: %s", what, filename, serr);
   lua_remove(L, fnameindex);
   return LUA_ERRFILE;
+  */
 }
 
 
@@ -949,7 +952,7 @@ LUALIB_API void luaL_checkversion_ (lua_State *L, lua_Number ver) {
     luaL_error(L, "version mismatch: app. needs %f, Lua core provides %f",
                   ver, *v);
   /* check conversions number -> integer types */
-  lua_pushnumber(L, -(lua_Number)(int32_t)0x1234);
+  lua_pushnumber(L, -(lua_Number)(int16_t)0x1234);
   if (lua_tointeger(L, -1) != -0x1234 ||
       lua_tounsigned(L, -1) != (lua_Unsigned)-0x1234)
     luaL_error(L, "bad conversion number->int;"

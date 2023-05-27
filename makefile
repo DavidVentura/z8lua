@@ -25,14 +25,13 @@ RANLIB= ranlib
 RM= rm -f
 
 MYCFLAGS= $(LOCAL)
-MYLDFLAGS=
+MYLDFLAGS= $(LDFLAGS)
 MYLIBS=
 
 
 # enable Linux goodies
 MYCFLAGS= $(LOCAL) -DLUA_USE_LINUX
-MYLDFLAGS= -Wl,-E
-MYLDFLAGS= -Wl
+MYLDFLAGS+= -Wl,-E
 MYLIBS= -ldl -lreadline -lhistory
 MYLIBS= -ldl -lreadline
 
@@ -73,14 +72,14 @@ $(LUA_T): $(LUA_O) $(CORE_T)
 	$(CC) -o $@ $(MYLDFLAGS) $(LUA_O) $(CORE_T) $(LIBS) $(MYLIBS) $(DL)
 
 $(LUAC_T): $(LUAC_O) $(CORE_T)
-	$(CC) -o $@ $(MYLDFLAGS) $(LUAC_O) $(CORE_T) $(LIBS) -ldl
+	$(CC) -o $@ $(MYLDFLAGS) $(LUAC_O) $(CORE_T) $(LIBS)
 
 clean:
 	rcsclean -u || true
 	$(RM) $(ALL_T) $(ALL_O)
 
 depend:
-	@$(CC) $(CFLAGS) -MM *.cpp
+	@$(CC) $(MYLDFLAGS) $(CFLAGS) -MM *.cpp
 
 echo:
 	@echo "CC = $(CC)"
@@ -95,7 +94,7 @@ echo:
 
 # DO NOT DELETE
 
-luac.o: luac.c
+luac.o: luac.cpp
 lapi.o: lapi.cpp lua.h luaconf.h fix32.h lapi.h llimits.h lstate.h \
  lobject.h ltm.h lzio.h lmem.h ldebug.h ldo.h lfunc.h lgc.h lstring.h \
  ltable.h lundump.h lvm.h

@@ -89,7 +89,7 @@ lua_Number luaO_arith (int op, lua_Number v1, lua_Number v2) {
     case LUA_OPROTR: return luai_numrotr(NULL, v1, v2);
     case LUA_OPUNM:  return luai_numunm(NULL, v1);
     case LUA_OPBNOT: return luai_numbnot(NULL, v1);
-    default: lua_assert(0); return (int32_t)0;
+    default: lua_assert(0); return (int16_t)0;
   }
 }
 

@@ -44,8 +44,10 @@ struct fix32
     // Anything above int16_t is risky because of precision loss, but Lua
     // does too many implicit conversions from int that we can’t mark this
     // one as explicit.
-    //inline fix32(int32_t x)  : m_bits(int32_t(x << 16)) {}
+    inline fix32(int32_t x)  : m_bits(int32_t(x << 16)) {}
+#ifdef __3DS__
     inline fix32(int x)  : m_bits(int32_t(x << 16)) {}
+#endif
 
     inline explicit fix32(uint16_t x) : m_bits(int32_t(x << 16)) {}
     inline explicit fix32(uint32_t x) : m_bits(int32_t(x << 16)) {}

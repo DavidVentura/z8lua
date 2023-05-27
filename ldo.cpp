@@ -340,12 +340,12 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
       int tt = rttype(func);
       int tag = getfcf_tag(tt); /* Extract the function signature */
       TValue *arg1;
-      lua_Number valarg1 = 0;
+      lua_Number valarg1 = (uint8_t)0;
 
       TValue *arg2;
       TValue *arg3;
-      lua_Number valarg2 = 0;
-      lua_Number valarg3 = 0;
+      lua_Number valarg2 = (uint8_t)0;
+      lua_Number valarg3 = (uint8_t)0;
       if (nargs >= 1) {
           arg1 = func + 1;
           //valarg1 = nvalue(arg1);
@@ -384,7 +384,7 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
               res = lua_Number::abs(valarg1);
               break;
           case FCF_SGN:
-              res = valarg1.bits() >= 0 ? 1 : -1;
+              res = (int8_t)(valarg1.bits() >= 0 ? 1 : -1);
               break;
           case FCF_BNOT:
               res = ~valarg1;
@@ -406,9 +406,8 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
           // 3 args
           case FCF_MID:
               {
-                  TValue *arg1 = func + 1;
-                  // this doesn't _call_ noop, although it should
-                  setnvalue(func, z8::fix32::floor(nvalue(arg1)));
+                  TValue *floor = func + 1;
+                  setnvalue(func, z8::fix32::floor(nvalue(floor)));
                   break;
               }
       }
