@@ -89,7 +89,7 @@ lua_Number luaO_arith (int op, lua_Number v1, lua_Number v2) {
     case LUA_OPROTR: return luai_numrotr(NULL, v1, v2);
     case LUA_OPUNM:  return luai_numunm(NULL, v1);
     case LUA_OPBNOT: return luai_numbnot(NULL, v1);
-    default: lua_assert(0); return (int16_t)0;
+    default: lua_assert(0); return lua_integer2number(0);
   }
 }
 
@@ -165,12 +165,12 @@ static lua_Number lua_strx2number (const char *s, char **endptr) {
 #endif
 
 
-static lua_Number readany (const char **s, lua_Number r, int *count, int32_t base, int max = INT_MAX) {
+static lua_Number readany (const char **s, lua_Number r, int *count, int32_t base, int max) {
   for (; lisxdigit(cast_uchar(**s)); (*s)++, max--) {
     if (max > 0) {
       int32_t d = luaO_hexavalue(cast_uchar(**s));
       if (d >= base) break;
-      r = r * cast_num(base) + cast_num(d);
+      r = l_mathop(add)(l_mathop(mul)(r, lua_integer2number(base)), lua_integer2number(d));
       (*count)++;
     }
   }
@@ -182,7 +182,7 @@ static lua_Number readany (const char **s, lua_Number r, int *count, int32_t bas
 ** convert an hexadecimal or binary numeric string to a number
 */
 static lua_Number lua_strany2number (const char *s, char **endptr, int base) {
-  lua_Number r = 0.0f, f = 0.0f;
+  lua_Number r = __ZERO, f = __ZERO;
   int e = 0, i = 0;
   int neg = 0;  /* 1 if number is negative */
   *endptr = cast(char *, s);  /* nothing is valid yet */
@@ -190,18 +190,19 @@ static lua_Number lua_strany2number (const char *s, char **endptr, int base) {
   neg = isneg(&s);  /* check sign */
   if (*s != '0' || (base == 2 && *(s + 1) != 'b' && *(s + 1) != 'B')
                 || (base == 16 && *(s + 1) != 'x' && *(s + 1) != 'X'))
-    return 0.f;  /* invalid format (no '0b' or '0x') */
+    return __ZERO;  /* invalid format (no '0b' or '0x') */
   s += 2;  /* skip '0x' or '0b' */
-  r = readany(&s, r, &i, base);  /* read integer part */
+  r = readany(&s, r, &i, base, INT16_MAX);  /* read integer part */
   if (*s == '.') {
     s++;  /* skip dot */
     f = readany(&s, f, &e, base, base == 2 ? 16 : 4);  /* read fractional part */
   }
   if (i == 0 && e == 0)
-    return 0.f;  /* invalid format (no digit) */
+    return __ZERO;  /* invalid format (no digit) */
   *endptr = cast(char *, s);  /* valid up to here */
-  r = lua_Number::frombits(r.bits() | (uint32_t)f.bits() >> (base == 2 ? e : e * 4));
-  return neg ? -r : r;
+  // FIXME this is now probably broken
+  r = fix32_from_bits(fix32_to_bits(r) | (uint32_t)fix32_to_bits(f) >> (base == 2 ? e : e * 4));
+  return neg ? l_mathop(invert_sign)(r) : r;
 }
 
 
@@ -249,11 +250,11 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
         break;
       }
       case 'd': {
-        setnvalue(L->top++, cast_num((int32_t)va_arg(argp, int)));
+        setnvalue(L->top++, lua_integer2number((int32_t)va_arg(argp, int)));
         break;
       }
       case 'f': {
-        setnvalue(L->top++, cast_num(va_arg(argp, l_uacNumber)));
+        setnvalue(L->top++, va_arg(argp, l_uacNumber));
         break;
       }
       case 'p': {

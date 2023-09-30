@@ -14,7 +14,8 @@
 
 LUAMOD_API int (luaopen_base) (lua_State *L);
 
-LUAMOD_API int (luaopen_pico8) (lua_State *L);
+//LUAMOD_API int (luaopen_pico8) (lua_State *L);
+//FIXME
 
 #define LUA_COLIBNAME	"coroutine"
 LUAMOD_API int (luaopen_coroutine) (lua_State *L);

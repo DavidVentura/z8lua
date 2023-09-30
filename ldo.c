@@ -340,12 +340,12 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
       int tt = rttype(func);
       int tag = getfcf_tag(tt); /* Extract the function signature */
       TValue *arg1;
-      lua_Number valarg1 = (uint8_t)0;
+      lua_Number valarg1 = __ZERO;
 
       TValue *arg2;
       TValue *arg3;
-      lua_Number valarg2 = (uint8_t)0;
-      lua_Number valarg3 = (uint8_t)0;
+      lua_Number valarg2 = __ZERO;
+      lua_Number valarg3 = __ZERO;
       if (nargs >= 1) {
           arg1 = func + 1;
           //valarg1 = nvalue(arg1);
@@ -366,28 +366,28 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
       switch (tag) {
           // 1 args
           case FCF_CEIL:
-              res = lua_Number::ceil(valarg1);
+              res = l_mathop(ceil)(valarg1);
               break;
           case FCF_FLR:
-              res = lua_Number::floor(valarg1);
+              res = l_mathop(floor)(valarg1);
               break;
           case FCF_COS:
-              res = z8::fix32::cos(valarg1);
+              res = l_mathop(cos)(valarg1);
               break;
           case FCF_SIN:
-              res = z8::fix32::sin(valarg1);
+              res = l_mathop(sin)(valarg1);
               break;
           case FCF_SQRT:
-              res = (valarg1.bits() > 0 ? std::sqrt((float)valarg1) : 0);
+              res = l_mathop(sqrt)(valarg1);
               break;
           case FCF_ABS:
-              res = lua_Number::abs(valarg1);
+              res = l_mathop(abs)(valarg1);
               break;
           case FCF_SGN:
-              res = (int8_t)(valarg1.bits() >= 0 ? 1 : -1);
+              res = l_mathop(sign)(valarg1);
               break;
           case FCF_BNOT:
-              res = ~valarg1;
+              res = l_mathop(bnot)(valarg1);
               break;
 
           // 2 args
@@ -397,7 +397,7 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
           case FCF_BXOR:
           case FCF_SHL:
           case FCF_SHR:
-              res = valarg1 >> int(valarg2);
+              res = l_mathop(shr)(valarg1, valarg2);
               break;
           case FCF_LSHR:
           case FCF_ROTL:
@@ -406,8 +406,9 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
           // 3 args
           case FCF_MID:
               {
-                  TValue *floor = func + 1;
-                  setnvalue(func, z8::fix32::floor(nvalue(floor)));
+				  assert(false);
+                  //TValue *floor = func + 1;
+                  //setnvalue(func, z8::fix32::floor(nvalue(floor)));
                   break;
               }
       }

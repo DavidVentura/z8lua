@@ -66,17 +66,17 @@ static int luaB_tonumber (lua_State *L) {
     if (*s == '-') { s++; neg = 1; }  /* handle signal */
     else if (*s == '+') s++;
     if (isalnum((unsigned char)*s)) {
-      lua_Number n = (int16_t)0;
+      lua_Number n = __ZERO;
       do {
         int16_t digit = (isdigit((unsigned char)*s)) ? *s - '0'
                        : toupper((unsigned char)*s) - 'A' + 10;
         if (digit >= base) break;  /* invalid numeral; force a fail */
-        n = n * (lua_Number)base + (lua_Number)digit;
+        n = l_mathop(mul)(n, l_mathop(add)(lua_integer2number(base), lua_integer2number(digit)));
         s++;
       } while (isalnum((unsigned char)*s));
       s += strspn(s, SPACECHARS);  /* skip trailing spaces */
       if (s == e) {  /* no invalid trailing characters? */
-        lua_pushnumber(L, (neg) ? -n : n);
+        lua_pushnumber(L, (neg) ? l_mathop(invert_sign)(n) : n);
         return 1;
       }  /* else not a number */
     }  /* else not a number */
@@ -170,7 +170,7 @@ static int luaB_collectgarbage (lua_State *L) {
   switch (o) {
     case LUA_GCCOUNT: {
       uint32_t b = lua_gc(L, LUA_GCCOUNTB, 0);
-      lua_pushnumber(L, res + ((lua_Number)b/1024));
+      lua_pushnumber(L, lua_integer2number(res + b/1024));
       lua_pushinteger(L, b);
       return 2;
     }

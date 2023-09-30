@@ -208,6 +208,7 @@ static int call_orderTM (lua_State *L, const TValue *p1, const TValue *p2,
 
 #define PEEK(ram, address) (ram && (address < 0x8000) ? ram[address] : 0)
 
+/*
 static z8::fix32 lua_peek(struct lua_State *L, z8::fix32 a, int count)
 {
   unsigned char const *p = G(L)->pico8memory;
@@ -226,6 +227,7 @@ static z8::fix32 lua_peek(struct lua_State *L, z8::fix32 a, int count)
   }
   return z8::fix32::frombits(ret);
 }
+*/
 
 
 static int l_strcmp (const TString *ls, const TString *rs) {
@@ -362,11 +364,11 @@ void luaV_objlen (lua_State *L, StkId ra, const TValue *rb) {
       Table *h = hvalue(rb);
       tm = fasttm(L, h->metatable, TM_LEN);
       if (tm) break;  /* metamethod? break switch to call it */
-      setnvalue(ra, cast_num((uint32_t)luaH_getn(h)));  /* else primitive len */
+      setnvalue(ra, lua_integer2number(luaH_getn(h)));  /* else primitive len */
       return;
     }
     case LUA_TSTRING: {
-      setnvalue(ra, cast_num((uint32_t)tsvalue(rb)->len));
+      setnvalue(ra, lua_integer2number(tsvalue(rb)->len));
       return;
     }
     default: {  /* try metamethod */
@@ -698,6 +700,7 @@ void luaV_execute (lua_State *L) {
       vmcase(OP_BNOT,
         unary_op(luai_numbnot, TM_BNOT);
       )
+	  /*
       vmcase(OP_PEEK,
         unary_op(luai_numpeek, TM_PEEK);
       )
@@ -707,6 +710,8 @@ void luaV_execute (lua_State *L) {
       vmcase(OP_PEEK4,
         unary_op(luai_numpeek4, TM_PEEK4);
       )
+	  */
+	  // FIXME PEEK
       vmcase(OP_NOT,
         TValue *rb = RB(i);
         int res = l_isfalse(rb);  /* next assignment may change this value */
@@ -831,12 +836,12 @@ void luaV_execute (lua_State *L) {
       )
       vmcase(OP_FORLOOP,
         lua_Number step = nvalue(ra+2);
-        lua_Number idx = luai_numadd(L, (lua_Number)nvalue(ra), step); /* increment index */
+        lua_Number idx = luai_numadd(L, nvalue(ra), step); /* increment index */
         lua_Number limit = nvalue(ra+1);
         /* check for idx sign wrap-around */
-        if (luai_numlt(L, 0, step) ? luai_numle(L, nvalue(ra), idx)
+        if (luai_numlt(L, __ZERO, step) ? luai_numle(L, nvalue(ra), idx)
                                    : luai_numle(L, idx, nvalue(ra)))
-        if (luai_numlt(L, 0, step) ? luai_numle(L, idx, limit)
+        if (luai_numlt(L, __ZERO, step) ? luai_numle(L, idx, limit)
                                    : luai_numle(L, limit, idx)) {
           ci->u.l.savedpc += GETARG_sBx(i);  /* jump back */
           setnvalue(ra, idx);  /* update internal index... */

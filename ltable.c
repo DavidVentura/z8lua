@@ -131,7 +131,7 @@ static int arrayindex (const TValue *key) {
     lua_Number n = nvalue(key);
     int32_t k;
     lua_number2int(k, n);
-    if (luai_numeq(cast_num(k), n))
+    if (luai_numeq(lua_integer2number(k), n))
       return k;
   }
   return -1;  /* `key' did not match some condition */
@@ -172,7 +172,7 @@ int luaH_next (lua_State *L, Table *t, StkId key) {
   int32_t i = findindex(L, t, key);  /* find original element */
   for (i++; i < t->sizearray; i++) {  /* try first array part */
     if (!ttisnil(&t->array[i])) {  /* a non-nil value? */
-      setnvalue(key, cast_num(i+1));
+      setnvalue(key, lua_integer2number(i+1));
       setobj2s(L, key+1, &t->array[i]);
       return 1;
     }
@@ -450,10 +450,10 @@ const TValue *luaH_getint (Table *t, int32_t key) {
   if (cast(unsigned int, key-1) < cast(unsigned int, t->sizearray))
     return &t->array[key-1];
   else {
-    lua_Number nk = cast_num(key);
+    lua_Number nk = lua_integer2number(key);
     Node *n = hashnum(t, nk);
     do {  /* check whether `key' is somewhere in the chain */
-      if (ttisnumber(gkey(n)) && luai_numeq((lua_Number)nvalue(gkey(n)), nk))
+      if (ttisnumber(gkey(n)) && luai_numeq(nvalue(gkey(n)), nk))
         return gval(n);  /* that's it */
       else n = gnext(n);
     } while (n);
@@ -488,7 +488,7 @@ const TValue *luaH_get (Table *t, const TValue *key) {
       int32_t k;
       lua_Number n = nvalue(key);
       lua_number2int(k, n);
-      if (luai_numeq(cast_num(k), n)) /* index is int? */
+      if (luai_numeq(lua_integer2number(k), n)) /* index is int? */
         return luaH_getint(t, k);  /* use specialized version */
       /* else go through */
     }
@@ -524,7 +524,7 @@ void luaH_setint (lua_State *L, Table *t, int32_t key, TValue *value) {
     cell = cast(TValue *, p);
   else {
     TValue k;
-    setnvalue(&k, cast_num(key));
+    setnvalue(&k, lua_integer2number(key));
     cell = luaH_newkey(L, t, &k);
   }
   setobj2t(L, cell, value);

@@ -419,7 +419,7 @@
 ** systems, you can leave 'lua_strx2number' undefined and Lua will
 ** provide its own implementation.
 */
-#define lua_str2number(s,p)	strtof((s), (p))
+#define lua_str2number(s,p)	fix32_from_float(strtof((s), (p)))
 
 #if defined(LUA_USE_STRTODHEX)
 #define lua_strx2number(s,p)	strtod((s), (p))
@@ -433,20 +433,20 @@
 /* the following operations need the math library */
 #if defined(lobject_c) || defined(lvm_c)
 #include <math.h>
-#define luai_nummod(L,a,b)	((a)%(b))
+#define luai_nummod(L,a,b)	(l_mathop(mod)(a,b))
 #define luai_numpow(L,a,b)	(l_mathop(pow)(a,b))
 #endif
 
 /* these are quite standard operations */
 #if defined(LUA_CORE)
-#define luai_numadd(L,a,b)	((a)+(b))
-#define luai_numsub(L,a,b)	((a)-(b))
-#define luai_nummul(L,a,b)	((a)*(b))
-#define luai_numdiv(L,a,b)	((a)/(b))
-#define luai_numunm(L,a)	(-(a))
-#define luai_numeq(a,b)		((a)==(b))
-#define luai_numlt(L,a,b)	((a)<(b))
-#define luai_numle(L,a,b)	((a)<=(b))
+#define luai_numadd(L,a,b)	(fix32_add(a, b))
+#define luai_numsub(L,a,b)	(fix32_sub(a, b))
+#define luai_nummul(L,a,b)	(fix32_mul(a, b))
+#define luai_numdiv(L,a,b)	(fix32_div(a, b))
+#define luai_numunm(L,a)	(fix32_invert_sign(a))
+#define luai_numeq(a,b)		(fix32_eq(a, b))
+#define luai_numlt(L,a,b)	(fix32_lt(a, b))
+#define luai_numle(L,a,b)	(fix32_leq(a, b))
 #define luai_numisnan(L,a)	(!luai_numeq((a), (a)))
 #endif
 
@@ -547,7 +547,7 @@
 
 
 #include <stdint.h> // for int16_t
-#include "fix32.h" // for z8::fix32
+#include "fix32.h"
 
 #undef LUA_USE_STRTODHEX
 #undef LUA_USE_LONGLONG
@@ -571,37 +571,36 @@
 
 #define LUA_PROGNAME	"z8lua"
 #define LUA_INTEGER	int16_t
-#define LUA_NUMBER	z8::fix32
-#define LUAI_UACNUMBER	z8::fix32
-#define l_mathop(x)	(z8::fix32::x)
+#define LUA_NUMBER	fix32_t
+#define LUAI_UACNUMBER	fix32_t
+#define l_mathop(x)	(fix32_##x)
 
-#define luai_numidiv(L,a,b)	(l_mathop(floor)((a)/(b)))
-#define luai_numband(L,a,b)	((a)&(b))
-#define luai_numbor(L,a,b)	((a)|(b))
-#define luai_numbxor(L,a,b)	((a)^(b))
-#define luai_numshl(L,a,b)	((a)<<int((b)))
-#define luai_numshr(L,a,b)	((a)>>int((b)))
-#define luai_numlshr(L,a,b)	(l_mathop(lshr)((a),int((b))))
-#define luai_numrotl(L,a,b)	(l_mathop(rotl)((a),int((b))))
-#define luai_numrotr(L,a,b)	(l_mathop(rotr)((a),int((b))))
-#define luai_numbnot(L,a)	(~(a))
-#define luai_numpeek(L,a)	(lua_peek(L,a,1))
-#define luai_numpeek2(L,a)	(lua_peek(L,a,2))
-#define luai_numpeek4(L,a)	(lua_peek(L,a,4))
+#define luai_numidiv(L,a,b)	(fix32_fdiv(a, b))
+#define luai_numband(L,a,b)	(fix32_band(a, b))
+#define luai_numbor(L,a,b)	(fix32_bor(a, b))
+#define luai_numbnot(L,a)	(fix32_bnot(a))
+#define luai_numbxor(L,a,b)	(fix32_bxor(a, b))
+#define luai_numshl(L,a,b)	(fix32_shl(a, b))
+#define luai_numshr(L,a,b)	(fix32_shr(a, b))
+// TODO: pico8
+#define luai_numlshr(L,a,b)	(l_mathop(lshr)(a,b))
+#define luai_numrotl(L,a,b)	(l_mathop(rotl)(a,b))
+#define luai_numrotr(L,a,b)	(l_mathop(rotr)(a,b))
+//#define luai_numpeek(L,a)	(lua_peek(L,a,1))
+//#define luai_numpeek2(L,a)	(lua_peek(L,a,2))
+//#define luai_numpeek4(L,a)	(lua_peek(L,a,4))
 
-#define lua_number2str(s,n) [&]() { \
-  int i = sprintf(s, "%1.4f", (double)n); \
-  while (i > 0 && s[i - 1] == '0') s[--i] = '\0'; \
-  if (i > 0 && s[i - 1] == '.') s[--i] = '\0'; \
-  return i; }()
+#define lua_number2str(s, n) print_fix32(n,s)
 
-#define luai_hashnum(i,n) (i = (n * z8::fix32::frombits(2654435769u)).bits())
+#define luai_hashnum(i,n) (i = fix32_to_bits(l_mathop(mul)(n, fix32_from_bits(265443576))))
 
-static inline z8::fix32 operator/(z8::fix32 x, int y) { return x / z8::fix32(static_cast<uint32_t>(y)); }
-static inline z8::fix32 operator+(int x, z8::fix32 y) { return z8::fix32(static_cast<uint32_t>(x)) + y; }
+#define lua_number2integer(_i,n)	(_i=(n).i)
+#define lua_number2unsigned(_i,n)   (_i=(n).i)
+#define lua_number2int(_i,n)	 	(_i=(n).i)
 
-static inline bool operator==(z8::fix32 x, int y) { return x == z8::fix32(static_cast<uint32_t>(y)); }
-static inline bool operator <(z8::fix32 x, int y) { return x  < z8::fix32(static_cast<uint32_t>(y)); }
+#define lua_integer2number(i)	fix32_from_int16(i)
+#define lua_unsigned2number(u)  fix32_from_int16(u)
+#define lua_number_is_zero(n) 	(((n).i == 0) && ((n).f == 0))
 
 #endif
 

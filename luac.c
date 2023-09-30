@@ -251,6 +251,7 @@ static void PrintString(const TString* ts)
 static void PrintConstant(const Proto* f, int i)
 {
  const TValue* o=&f->k[i];
+char buf[16] = {0};
  switch (ttypenv(o))
  {
   case LUA_TNIL:
@@ -260,7 +261,8 @@ static void PrintConstant(const Proto* f, int i)
         printf(bvalue(o) ? "true" : "false");
         break;
   case LUA_TNUMBER:
-        printf("[%f]", (float)nvalue(o));
+		print_fix32(nvalue(o), buf);
+        printf("[%s]", buf);
         break;
   case LUA_TSTRING:
         PrintString(rawtsvalue(o));

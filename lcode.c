@@ -306,7 +306,7 @@ static int addk (FuncState *fs, TValue *key, TValue *v) {
   k = fs->nk;
   /* numerical value does not need GC barrier;
      table has no metatable, so it does not need to invalidate cache */
-  setnvalue(idx, cast_num(k));
+  setnvalue(idx, lua_integer2number(k));
   luaM_growvector(L, f->k, k, f->sizek, TValue, MAXARG_Ax, "constants");
   while (oldsize < f->sizek) setnilvalue(&f->k[oldsize++]);
   setobj(L, &f->k[k], v);
@@ -328,7 +328,7 @@ int luaK_numberK (FuncState *fs, lua_Number r) {
   lua_State *L = fs->ls->L;
   TValue o;
   setnvalue(&o, r);
-  if (r == 0 || luai_numisnan(NULL, r)) {  /* handle -0 and NaN */
+  if (lua_number_is_zero(r) || luai_numisnan(NULL, r)) {  /* handle -0 and NaN */
     /* use raw representation as key to avoid numeric problems */
     setsvalue(L, L->top++, luaS_newlstr(L, (char *)&r, sizeof(r)));
     n = addk(fs, L->top - 1, &o);
@@ -713,7 +713,7 @@ void luaK_indexed (FuncState *fs, expdesc *t, expdesc *k) {
 static int constfolding (OpCode op, expdesc *e1, expdesc *e2) {
   lua_Number r;
   if (!isnumeral(e1) || !isnumeral(e2)) return 0;
-  if ((op == OP_DIV || op == OP_MOD) && e2->u.nval == 0)
+  if ((op == OP_DIV || op == OP_MOD) && lua_number_is_zero(e2->u.nval))
     return 0;  /* do not attempt to divide by 0 */
   r = luaO_arith(op - OP_ADD + LUA_OPADD, e1->u.nval, e2->u.nval);
   e1->u.nval = r;
@@ -762,7 +762,8 @@ static void codecomp (FuncState *fs, OpCode op, int cond, expdesc *e1,
 
 void luaK_prefix (FuncState *fs, UnOpr op, expdesc *e, int line) {
   expdesc e2;
-  e2.t = e2.f = NO_JUMP; e2.k = VKNUM; e2.u.nval = (int16_t)0;
+  e2.t = e2.f = NO_JUMP; e2.k = VKNUM;
+  e2.u.nval = lua_integer2number(0);
   switch (op) {
     case OPR_MINUS: {
       if (isnumeral(e))  /* minus constant? */
@@ -784,7 +785,8 @@ void luaK_prefix (FuncState *fs, UnOpr op, expdesc *e, int line) {
     }
     case OPR_PEEK: case OPR_PEEK2: case OPR_PEEK4: {
       luaK_exp2anyreg(fs, e);  /* cannot operate on constants */
-      codearith(fs, OpCode(op - OPR_PEEK + OP_PEEK), e, &e2, line);
+	  OpCode o = cast(OpCode, op - OPR_PEEK + OP_PEEK);
+      codearith(fs, o, e, &e2, line);
       break;
     }
     case OPR_NOT: codenot(fs, e); break;

@@ -18,7 +18,7 @@
 
 #define LUA_VERSION_MAJOR	"5"
 #define LUA_VERSION_MINOR	"2"
-#define LUA_VERSION_NUM		((int16_t)502)
+#define LUA_VERSION_NUM		((fix32_t){.i=5, .f=2})
 #define LUA_VERSION_RELEASE	"4"
 
 #define LUA_VERSION	"Lua " LUA_VERSION_MAJOR "." LUA_VERSION_MINOR

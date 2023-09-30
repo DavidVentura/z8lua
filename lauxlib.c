@@ -948,11 +948,11 @@ LUALIB_API void luaL_checkversion_ (lua_State *L, lua_Number ver) {
   const lua_Number *v = lua_version(L);
   if (v != lua_version(NULL))
     luaL_error(L, "multiple Lua VMs detected");
-  else if (*v != ver)
+  else if (!l_mathop(eq)(*v, ver))
     luaL_error(L, "version mismatch: app. needs %f, Lua core provides %f",
                   ver, *v);
   /* check conversions number -> integer types */
-  lua_pushnumber(L, -(lua_Number)(int16_t)0x1234);
+  lua_pushnumber(L, l_mathop(invert_sign)(lua_integer2number(0x1234)));
   if (lua_tointeger(L, -1) != -0x1234 ||
       lua_tounsigned(L, -1) != (lua_Unsigned)-0x1234)
     luaL_error(L, "bad conversion number->int;"

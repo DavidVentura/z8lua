@@ -348,7 +348,7 @@ LUA_API lua_Number lua_tonumberx (lua_State *L, int idx, int *isnum) {
   }
   else {
     if (isnum) *isnum = 0;
-    return (lua_Number)(uint8_t)0;
+    return lua_integer2number(0);
   }
 }
 
@@ -490,7 +490,7 @@ LUA_API void lua_pushnumber (lua_State *L, lua_Number n) {
 
 LUA_API void lua_pushinteger (lua_State *L, lua_Integer n) {
   lua_lock(L);
-  setnvalue(L->top, cast_num(n));
+  setnvalue(L->top, lua_integer2number(n));
   api_incr_top(L);
   lua_unlock(L);
 }
@@ -499,7 +499,7 @@ LUA_API void lua_pushinteger (lua_State *L, lua_Integer n) {
 LUA_API void lua_pushunsigned (lua_State *L, lua_Unsigned u) {
   lua_Number n;
   lua_lock(L);
-  n = lua_unsigned2number((uint32_t)u);
+  n = lua_unsigned2number(u);
   setnvalue(L->top, n);
   api_incr_top(L);
   lua_unlock(L);
